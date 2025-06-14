@@ -35,6 +35,7 @@ from .excel_handler import ExcelHandler
 from .csv_handler import CSVHandler
 from .duplicate_checker import DuplicateChecker
 from .importer_gui import ImporterGUI
+from .logger import logger
 
 # Available banks
 BANKS = {
@@ -63,15 +64,15 @@ Examples:
     
     # If all arguments provided via command line, process directly
     if args.bank and args.csv_file and args.excel_file:
-        print("Bank to Excel Importer")
-        print("=" * 40)
+        logger.info("Bank to Excel Importer")
+        logger.info("=" * 40)
         importer = BANKS[args.bank]()
         success, message = importer.import_transactions(args.csv_file, args.excel_file)
-        print("\n" + "=" * 40)
+        logger.info("\n" + "=" * 40)
         if success:
-            print("Import completed successfully!")
+            logger.info("Import completed successfully!")
         else:
-            print("Import failed!")
+            logger.error("Import failed!")
             sys.exit(1)
     else:
         # Show GUI dialog
@@ -79,8 +80,8 @@ Examples:
             gui = ImporterGUI()
             gui.run()
         except Exception as e:
-            print(f"Error starting GUI: {e}")
-            print("Please ensure tkinter is installed: pip install tkinter")
+            logger.error(f"Error starting GUI: {e}")
+            logger.error("Please ensure tkinter is installed: pip install tkinter")
             sys.exit(1)
 
 if __name__ == "__main__":

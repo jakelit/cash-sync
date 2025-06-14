@@ -6,8 +6,11 @@ from datetime import datetime, timedelta
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
+import traceback
+from typing import Dict, Any, Optional, Tuple
 from .capital_one_importer import CapitalOneImporter
 from .ally_importer import AllyImporter
+from .logger import logger
 
 class ImporterGUI:
     def __init__(self):
@@ -105,7 +108,8 @@ class ImporterGUI:
                         self.excel_var.set(os.path.join(downloads_path, "Tiller-Foundation-Template.xlsx"))
             
         except Exception as e:
-            print(f"Error loading settings: {e}")
+            logger.error(f"Error loading settings: {e}")
+            logger.debug(f"Traceback:\n{traceback.format_exc()}")
     
     def save_settings(self):
         """Save current file paths to config file."""
@@ -120,7 +124,8 @@ class ImporterGUI:
                 json.dump(config, f, indent=2)
                 
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            logger.error(f"Error saving settings: {e}")
+            logger.debug(f"Traceback:\n{traceback.format_exc()}")
     
     def create_widgets(self):
         # Configure style
@@ -314,12 +319,8 @@ class ImporterGUI:
                 messagebox.showerror("Error", message)
                 
         except Exception as e:
-            import traceback
-            # Print full traceback to console
-            print(f"Error during import:\n{traceback.format_exc()}")
-            # Show user-friendly error message
-            progress_window.destroy()
-            messagebox.showerror("Error", f"An error occurred during import: {str(e)}")
+            logger.error(f"Error during import:\n{traceback.format_exc()}")
+            messagebox.showerror("Error", str(e))
     
     def run(self):
         # Center the main window

@@ -5,7 +5,9 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from typing import List, Dict, Any
 from .duplicate_checker import DuplicateChecker
 from datetime import datetime
-from copy import copy
+from copy import copy, deepcopy
+import traceback
+from .logger import logger
 
 class ExcelHandler:
     """
@@ -15,6 +17,7 @@ class ExcelHandler:
     1. Creates proper Excel Table if missing
     2. Uses table.ref expansion instead of manual row insertion
     3. Preserves formatting through table structure
+    4. Inserts transactions from newest to oldest
     """
     
     def __init__(self, excel_file: str):
@@ -27,7 +30,7 @@ class ExcelHandler:
     
     def load_workbook(self):
         """Load the Excel workbook and locate the Transactions table."""
-        print(f"Loading workbook: {self.excel_file}")
+        logger.info(f"Loading workbook: {self.excel_file}")
         self.wb = load_workbook(self.excel_file)
         
         # Find the Transactions table across all worksheets
@@ -37,12 +40,12 @@ class ExcelHandler:
         for sheet_name in self.wb.sheetnames:
             ws = self.wb[sheet_name]
             if ws.tables:
-                print(f"Found {len(ws.tables)} table(s) in worksheet '{sheet_name}': {list(ws.tables.keys())}")
+                logger.debug(f"Found {len(ws.tables)} table(s) in worksheet '{sheet_name}': {list(ws.tables.keys())}")
                 for table_name in ws.tables:
                     if table_name.lower() == 'transactions':
                         transactions_table = ws.tables[table_name]
                         table_worksheet = ws
-                        print(f"Found 'Transactions' table in worksheet '{sheet_name}'")
+                        logger.info(f"Found 'Transactions' table in worksheet '{sheet_name}'")
                         break
                 if transactions_table:
                     break
@@ -53,7 +56,7 @@ class ExcelHandler:
         self.table = transactions_table
         self.ws = table_worksheet
         
-        print(f"Table range: {self.table.ref}")
+        logger.debug(f"Table range: {self.table.ref}")
         self._load_existing_data()
     
     def _raise_table_missing_error(self):
@@ -99,8 +102,8 @@ formatting management in the code.
         )
         
         self.existing_columns = list(self.existing_df.columns)
-        print(f"Loaded {len(self.existing_df)} existing transactions")
-        print(f"Table columns: {self.existing_columns}")
+        logger.info(f"Loaded {len(self.existing_df)} existing transactions")
+        logger.debug(f"Table columns: {self.existing_columns}")
     
     def update_transactions(self, transactions: List[Dict[str, Any]]) -> int:
         """Add new transactions to the Transactions table."""
@@ -110,10 +113,10 @@ formatting management in the code.
         )
         
         if not filtered_transactions:
-            print("No new transactions to import (all appear to be duplicates)")
+            logger.warning("No new transactions to import (all appear to be duplicates)")
             return 0
         
-        print(f"Adding {len(filtered_transactions)} new transactions...")
+        logger.info(f"Adding {len(filtered_transactions)} new transactions...")
         
         # Validate that transaction columns match table columns
         self._validate_transaction_columns(filtered_transactions[0])
@@ -121,13 +124,14 @@ formatting management in the code.
         # Add transactions to the table using proper method
         rows_added = self._add_transactions_to_table(filtered_transactions)
         
-        print(f"Successfully added {rows_added} transactions to the table")
+        logger.info(f"Successfully added {rows_added} transactions to the table")
         return rows_added
     
     def _add_transactions_to_table(self, transactions: List[Dict[str, Any]]) -> int:
         """
         Add transactions using proper table expansion method.
         This preserves formatting and table features.
+        Transactions are inserted from newest to oldest.
         """
         # Get current table boundaries
         min_col, min_row, max_col, current_max_row = range_boundaries(self.table.ref)
@@ -139,14 +143,15 @@ formatting management in the code.
         last_data_row = current_max_row
         
         # Calculate new table dimensions
-        new_max_row = current_max_row + len(transactions)
+        new_max_row = current_max_row + len(sorted_transactions)
         new_table_range = f"{get_column_letter(min_col)}{min_row}:{get_column_letter(max_col)}{new_max_row}"
         
         # STEP 1: Expand table range first
         self.table.ref = new_table_range
-        print(f"Expanded table range to: {new_table_range}")
+        logger.debug(f"Expanded table range to: {new_table_range}")
         
         # STEP 2: Add new rows and copy formatting from the last data row
+        # Transactions are added in sorted order (newest first)
         for i, transaction in enumerate(sorted_transactions):
             new_row_num = current_max_row + 1 + i
             
@@ -155,13 +160,19 @@ formatting management in the code.
             
             # Populate the row with data
             self._populate_table_row(new_row_num, transaction, min_col)
+            
+            # Log the transaction being added for debugging
+            date_val = transaction.get('Date', 'No Date')
+            amount_val = transaction.get('Amount', 'No Amount')
+            desc_val = transaction.get('Description', 'No Description')
+            logger.debug(f"  Row {new_row_num}: {date_val} | {amount_val} | {desc_val}")
         
         # STEP 3: Now extend conditional formatting and data validation rules AFTER table expansion
         # Look for rules that applied to complete columns ending at the old boundary
         self._extend_conditional_formatting(min_col, min_row, max_col, current_max_row, new_max_row)
         self._extend_data_validation(min_col, min_row, max_col, current_max_row, new_max_row)
         
-        return len(transactions)
+        return len(sorted_transactions)
 
     def _copy_row_formatting(self, source_row: int, target_row: int, min_col: int, max_col: int):
         """Copy formatting from source row to target row."""
@@ -211,18 +222,17 @@ formatting management in the code.
                         for rule in cf.rules:
                             rules_to_recreate.append((new_range_str, rule))
                             rules_updated += 1
-                            print(f"Will recreate rule for range {new_range_str}")
+                            logger.debug(f"Will recreate conditional formatting rule for range {new_range_str}")
                         
                         # Remove the old conditional formatting
                         self.ws.conditional_formatting._cf_rules.pop(cf, None)
 
-                        print(f"Extended conditional formatting from {range_str} to {new_range_str}")
+                        logger.debug(f"Extended conditional formatting from {range_str} to {new_range_str}")
                         
                 except Exception as e:
-                    import traceback
-                    print(f"Failed to process conditional formatting range {range_str}:")
-                    print(f"Details: {str(e)}")
-                    print(f"Traceback:\n{traceback.format_exc()}")
+                    logger.error(f"Failed to process conditional formatting range {range_str}:")
+                    logger.error(f"Details: {str(e)}")
+                    logger.debug(f"Traceback:\n{traceback.format_exc()}")
                     continue
             
             # Re-add the conditional formatting rules with new ranges
@@ -230,7 +240,7 @@ formatting management in the code.
                 self.ws.conditional_formatting.add(range_str, rule)
         
         if rules_updated == 0:
-            print("Note: No complete column conditional formatting rules were found to extend")
+            logger.debug("Note: No complete column conditional formatting rules were found to extend")
 
     def _extend_data_validation(self, min_col: int, min_row: int, max_col: int, old_max_row: int, new_max_row: int):
         """Extend data validation rules that apply to entire table columns."""
@@ -256,11 +266,12 @@ formatting management in the code.
                         new_range_str = f"{get_column_letter(dv_min_col)}{first_data_row}:{get_column_letter(dv_max_col)}{new_max_row}"
                         validations_to_recreate.append((dv, new_range_str))
                         rules_updated += 1
-                        print(f"Will recreate data validation for range {new_range_str}")
+                        logger.debug(f"Will recreate data validation for range {new_range_str}")
                         break  # Move to next data validation rule
                             
                 except Exception as e:
-                    print(f"Error processing data validation range {range_obj}: {e}")
+                    logger.error(f"Error processing data validation range {range_obj}: {e}")                    
+                    logger.debug(f"Traceback:\n{traceback.format_exc()}")
                     continue
         
         # Remove old validations and add new ones
@@ -289,7 +300,7 @@ formatting management in the code.
             self.ws.data_validations.append(new_dv)
         
         if rules_updated == 0:
-            print("Note: No complete column data validation rules were found to extend")
+            logger.debug("Note: No complete column data validation rules were found to extend")
    
     def _populate_table_row(self, row_num: int, transaction: Dict[str, Any], start_col: int):
         """Populate a table row with transaction data."""
@@ -321,7 +332,10 @@ formatting management in the code.
             )
     
     def _sort_transactions_by_date(self, transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Sort transactions by date, newest first."""
+        """
+        Sort transactions by date, newest first.
+        This ensures transactions are inserted from newest to oldest.
+        """
         def get_date_key(transaction):
             date_val = transaction.get('Date')
             if not date_val:
@@ -337,11 +351,13 @@ formatting management in the code.
             except:
                 return datetime.min
         
-        return sorted(transactions, key=get_date_key, reverse=True)
+        sorted_txns = sorted(transactions, key=get_date_key, reverse=True)
+        logger.debug(f"Sorted {len(sorted_txns)} transactions by date (newest first)")        
+        return sorted_txns
     
     def save(self):
         """Save the workbook."""
-        print(f"Saving workbook to: {self.excel_file}")
+        logger.info(f"Saving workbook to: {self.excel_file}")
         self.wb.save(self.excel_file)
         self.wb.close()
-        print("Workbook saved and closed successfully")
+        logger.info("Workbook saved and closed successfully")

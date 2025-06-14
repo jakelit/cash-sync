@@ -2,6 +2,7 @@ from .base_importer import BaseImporter
 import pandas as pd
 from datetime import datetime
 import re
+from .logger import logger
 
 class AllyImporter(BaseImporter):
     def __init__(self):
@@ -44,5 +45,5 @@ class AllyImporter(BaseImporter):
             return amount
             
         except Exception as e:
-            print(f"Error parsing amount '{amount_str}': {e}")
+            logger.error(f"Error parsing amount '{amount_str}': {e}")
             return 0.0

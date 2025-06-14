@@ -1,4 +1,5 @@
 from .base_importer import BaseImporter
+from .logger import logger
 
 class CapitalOneImporter(BaseImporter):
     def __init__(self):
@@ -51,6 +52,6 @@ class CapitalOneImporter(BaseImporter):
             return amount
             
         except Exception as e:
-            print(f"Error parsing amount '{amount_str}': {e}")
+            logger.error(f"Error parsing amount '{amount_str}': {e}")
             return 0.0 
     

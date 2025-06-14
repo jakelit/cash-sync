@@ -2,16 +2,14 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 import re
-from abc import ABC, abstractmethod
-from copy import copy, deepcopy
-from openpyxl import load_workbook
-from openpyxl.worksheet.datavalidation import DataValidation
-from openpyxl.utils import get_column_letter
+from abc import abstractmethod
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
+import traceback
 from .csv_handler import CSVHandler
 from .excel_handler import ExcelHandler
 from .importer_interface import TransactionImporter
+from .logger import logger
 
 
 class BaseImporter(TransactionImporter):
@@ -101,8 +99,8 @@ class BaseImporter(TransactionImporter):
             return date
                 
         except Exception as date_error:
-            print(f"Date parsing error: {date_error}")
-            print(f"Raw date value: '{date_str}'")
+            logger.error(f"Date parsing error: {date_error}")
+            logger.debug(f"Raw date value: '{date_str}'")
             return datetime.now().date()
 
     def validate_files(self, csv_file, excel_file):
@@ -229,368 +227,6 @@ class BaseImporter(TransactionImporter):
         
         return cleaned
 
-    def check_for_duplicates(self, existing_df, new_transactions):
-        """Check for potential duplicate transactions and return filtered list."""
-        if existing_df.empty or not new_transactions:
-            return new_transactions
-        
-        # Convert new transactions to DataFrame for easier comparison
-        new_df = pd.DataFrame(new_transactions)
-        
-        # Create a comparison key using date, amount, and first 20 chars of description
-        def create_comparison_key(row):
-            date_str = str(row.get('Date', ''))
-            amount_str = str(row.get('Amount', ''))
-            desc_str = str(row.get('Description', ''))[:20].strip()
-            return f"{date_str}|{amount_str}|{desc_str}"
-        
-        # Create comparison keys for existing transactions
-        existing_keys = set()
-        for _, row in existing_df.iterrows():
-            key = create_comparison_key(row)
-            existing_keys.add(key)
-        
-        # Filter out potential duplicates
-        filtered_transactions = []
-        duplicate_count = 0
-        
-        for transaction in new_transactions:
-            key = create_comparison_key(transaction)
-            if key not in existing_keys:
-                filtered_transactions.append(transaction)
-                existing_keys.add(key)  # Add to existing keys to prevent duplicates within new transactions
-            else:
-                duplicate_count += 1
-        
-        if duplicate_count > 0:
-            print(f"Filtered out {duplicate_count} potential duplicate transactions")
-        
-        return filtered_transactions
-    
-    def update_excel_file(self, excel_file, transactions):
-        """Update the Tiller Excel file with new transactions while preserving formatting."""
-        try:
-            # Load the workbook and worksheet
-            wb = load_workbook(excel_file)
-            
-            if 'Transactions' not in wb.sheetnames:
-                raise ValueError("'Transactions' worksheet not found in Excel file")
-            
-            ws = wb['Transactions']
-            
-            # Read the existing data to get column structure and check for duplicates
-            existing_df = pd.read_excel(excel_file, sheet_name='Transactions')
-            existing_columns = list(existing_df.columns)
-            
-            # Filter out potential duplicates
-            filtered_transactions = self.check_for_duplicates(existing_df, transactions)
-            
-            if not filtered_transactions:
-                print("No new transactions to import (all appear to be duplicates)")
-                return 0
-            
-            # Find the header row (first row with data)
-            header_row = 1
-            for row in ws.iter_rows(min_row=1, max_row=10, min_col=1, max_col=20):
-                if any(cell.value for cell in row):
-                    header_row = row[0].row
-                    break
-            
-            print(f"Header row found at: {header_row}")
-            
-            # Convert new transactions to DataFrame with proper column order
-            new_df = pd.DataFrame(filtered_transactions)
-            new_df = new_df.reindex(columns=existing_columns, fill_value='')
-            
-            # Sort new transactions by date (newest first)
-            if 'Date' in new_df.columns and not new_df.empty:
-                new_df = new_df.sort_values('Date', ascending=False)
-            
-            # Get the date column index
-            date_col_idx = existing_columns.index('Date') + 1  # +1 because Excel is 1-based
-            
-            # Store the current max row BEFORE making any changes
-            original_max_row = ws.max_row
-            first_data_row = header_row + 1
-            
-            # Capture formatting information BEFORE making changes
-            print("Capturing existing formatting...")
-            
-            # 1. Capture data validations and their ranges
-            original_data_validations = []
-            for dv in ws.data_validations.dataValidation:
-                # Store the validation rule and ALL its current ranges
-                dv_info = {
-                    'type': dv.type,
-                    'formula1': dv.formula1,
-                    'formula2': dv.formula2,
-                    'allow_blank': dv.allow_blank,
-                    'showDropDown': dv.showDropDown,
-                    'showInputMessage': dv.showInputMessage,
-                    'showErrorMessage': dv.showErrorMessage,
-                    'errorTitle': dv.errorTitle,
-                    'error': dv.error,
-                    'promptTitle': dv.promptTitle,
-                    'prompt': dv.prompt,
-                    'ranges': []
-                }
-                
-                # Collect all ranges for this validation
-                for cell_range in dv.ranges:
-                    dv_info['ranges'].append(str(cell_range))
-                
-                original_data_validations.append(dv_info)
-                print(f"Found data validation: {dv.type} for ranges: {dv_info['ranges']}")
-            
-            # 2. Capture conditional formatting rules and their ranges
-            original_conditional_formatting = []
-            for cf_range in ws.conditional_formatting:
-                rules_list = ws.conditional_formatting[cf_range]
-                for rule in rules_list:
-                    cf_info = {
-                        'rule': deepcopy(rule),
-                        'range': str(cf_range) if hasattr(cf_range, 'coord') else cf_range
-                    }
-                    original_conditional_formatting.append(cf_info)
-                    print(f"Found conditional formatting rule for range: {cf_info['range']}")
-            
-            # 3. Capture cell styles from the first data row (template)
-            template_styles = {}
-            if first_data_row <= original_max_row:
-                for col in range(1, len(existing_columns) + 1):
-                    cell = ws.cell(row=first_data_row, column=col)
-                    if cell:
-                        template_styles[col] = {
-                            'font': copy(cell.font),
-                            'fill': copy(cell.fill),
-                            'border': copy(cell.border),
-                            'alignment': copy(cell.alignment),
-                            'number_format': cell.number_format,
-                            'protection': copy(cell.protection)
-                        }
-            
-            # Find empty rows in the table
-            empty_rows = []
-            for row in range(header_row + 1, ws.max_row + 1):
-                if all(ws.cell(row=row, column=col).value is None for col in range(1, len(existing_columns) + 1)):
-                    empty_rows.append(row)
-            
-            # Track which rows we actually insert (for updating ranges later)
-            inserted_rows = []
-            
-            # For each new transaction, find its correct position based on date
-            for _, row in new_df.iterrows():
-                # Get the transaction date
-                trans_date = row['Date']
-                if isinstance(trans_date, datetime):
-                    trans_date = trans_date.date()
-                
-                # Find the correct insertion point
-                current_row = header_row + 1
-                while current_row <= ws.max_row:
-                    cell_value = ws.cell(row=current_row, column=date_col_idx).value
-                    if cell_value is None:
-                        break
-                    
-                    # Convert cell value to date if it's a string or datetime
-                    if isinstance(cell_value, str):
-                        try:
-                            cell_date = pd.to_datetime(cell_value).date()
-                        except:
-                            break
-                    elif isinstance(cell_value, datetime):
-                        cell_date = cell_value.date()
-                    else:
-                        cell_date = cell_value
-                    
-                    # If transaction date is newer than cell date, insert here
-                    if trans_date > cell_date:
-                        break
-                    
-                    current_row += 1
-                
-                # Try to reuse an empty row if available
-                target_row = None
-                for empty_row in empty_rows:
-                    if empty_row <= current_row:
-                        target_row = empty_row
-                        empty_rows.remove(empty_row)
-                        break
-                
-                if target_row is None:
-                    # Insert a new row
-                    ws.insert_rows(current_row)
-                    target_row = current_row
-                    inserted_rows.append(target_row)
-                    print(f"Inserted new row at position {target_row}")
-                
-                # Add the transaction data
-                for col_idx, (col_name, value) in enumerate(row.items(), 1):
-                    cell = ws.cell(row=target_row, column=col_idx)
-                    
-                    # Apply template style if available
-                    if col_idx in template_styles:
-                        style = template_styles[col_idx]
-                        cell.font = style['font']
-                        cell.fill = style['fill'] 
-                        cell.border = style['border']
-                        cell.alignment = style['alignment']
-                        cell.number_format = style['number_format']
-                        cell.protection = style['protection']
-                    
-                    # Handle different data types
-                    if pd.isna(value):
-                        cell.value = None
-                    elif isinstance(value, (pd.Timestamp, datetime)):
-                        cell.value = value.date() if hasattr(value, 'date') else value
-                    else:
-                        cell.value = value
-            
-            # Now update data validation ranges if we inserted rows
-            if inserted_rows and original_data_validations:
-                print(f"Updating data validation for {len(inserted_rows)} inserted rows...")
-                
-                # Clear existing data validations
-                ws.data_validations = type(ws.data_validations)()
-                
-                # Re-create each data validation with expanded ranges
-                for dv_info in original_data_validations:
-                    new_dv = DataValidation(
-                        type=dv_info['type'],
-                        formula1=dv_info['formula1'],
-                        formula2=dv_info['formula2'],
-                        allow_blank=dv_info['allow_blank'],
-                        showDropDown=dv_info['showDropDown'],
-                        showInputMessage=dv_info['showInputMessage'],
-                        showErrorMessage=dv_info['showErrorMessage'],
-                        errorTitle=dv_info['errorTitle'],
-                        error=dv_info['error'],
-                        promptTitle=dv_info['promptTitle'],
-                        prompt=dv_info['prompt']
-                    )
-                    
-                    # Process each range and expand if necessary
-                    for range_str in dv_info['ranges']:
-                        expanded_ranges = self._expand_range_for_new_rows(
-                            range_str, inserted_rows, original_max_row, header_row
-                        )
-                        for expanded_range in expanded_ranges:
-                            new_dv.add(expanded_range)
-                            print(f"Added validation range: {expanded_range}")
-                    
-                    ws.add_data_validation(new_dv)
-            
-            # Update conditional formatting ranges if we inserted rows
-            if inserted_rows and original_conditional_formatting:
-                print(f"Updating conditional formatting for {len(inserted_rows)} inserted rows...")
-                
-                # Clear existing conditional formatting
-                ws.conditional_formatting = type(ws.conditional_formatting)() 
-                
-                # Re-create each conditional formatting rule with expanded ranges
-                for cf_info in original_conditional_formatting:
-                    expanded_ranges = self._expand_range_for_new_rows(
-                        cf_info['range'], inserted_rows, original_max_row, header_row
-                    )
-                    for expanded_range in expanded_ranges:
-                        ws.conditional_formatting.add(expanded_range, cf_info['rule'])
-                        print(f"Added conditional formatting range: {expanded_range}")
-            
-            # Find and update table if it exists
-            if ws.tables:
-                table_name = list(ws.tables.keys())[0]
-                table = ws.tables[table_name]
-                print(f"Found table: {table_name}")
-                
-                # Calculate new table range
-                max_row = ws.max_row
-                max_col = len(existing_columns)
-                max_col_letter = get_column_letter(max_col)
-                
-                # Update table range
-                new_range = f"A{header_row}:{max_col_letter}{max_row}"
-                table.ref = new_range
-                print(f"Extended table range to: {new_range}")
-            
-            # Save the workbook
-            wb.save(excel_file)
-            wb.close()
-            
-            print(f"Successfully added {len(filtered_transactions)} transactions")
-            return len(filtered_transactions)
-            
-        except Exception as e:
-            raise Exception(f"Error updating Excel file: {str(e)}") from e
-
-    def _expand_range_for_new_rows(self, range_str, inserted_rows, original_max_row, header_row):
-        """Expand a range to include newly inserted rows."""
-        from openpyxl.utils import range_boundaries, get_column_letter
-        
-        try:
-            # Clean up the range string if it's a ConditionalFormatting object
-            if isinstance(range_str, str) and range_str.startswith('<ConditionalFormatting'):
-                # Extract the actual range from the string (e.g., "D2" from "<ConditionalFormatting D2>")
-                range_str = range_str.split()[-1].rstrip('>')
-            
-            # Parse the original range
-            min_col, min_row, max_col, max_row = range_boundaries(range_str)
-            
-            expanded_ranges = []
-            
-            # Add the original range (updated if it extended to the bottom)
-            if max_row >= original_max_row:
-                # This range went to the bottom, so extend it
-                new_max_row = max_row + len(inserted_rows)
-                min_col_letter = get_column_letter(min_col)
-                max_col_letter = get_column_letter(max_col)
-                extended_range = f"{min_col_letter}{min_row}:{max_col_letter}{new_max_row}"
-                expanded_ranges.append(extended_range)
-            else:
-                # Keep original range as-is
-                expanded_ranges.append(range_str)
-            
-            # Add ranges for each inserted row (if the original range was row-specific)
-            if min_row > header_row and max_row < original_max_row:
-                # This looks like it was applied to specific data rows
-                min_col_letter = get_column_letter(min_col)
-                max_col_letter = get_column_letter(max_col)
-                
-                for inserted_row in inserted_rows:
-                    if min_col == max_col:
-                        # Single column
-                        new_range = f"{min_col_letter}{inserted_row}"
-                    else:
-                        # Multiple columns
-                        new_range = f"{min_col_letter}{inserted_row}:{max_col_letter}{inserted_row}"
-                    expanded_ranges.append(new_range)
-            
-            return expanded_ranges
-            
-        except Exception as e:
-            print(f"Warning: Could not expand range {range_str}: {e}")
-            return [range_str]
-
-    def read_bank_csv(self, csv_file):
-        """Read and parse bank CSV file."""
-        df = self.read_csv(csv_file)
-        
-        # Check if all expected columns are present
-        expected_columns = self.get_expected_columns()
-        missing_columns = set(expected_columns) - set(df.columns)
-        if missing_columns:
-            # Try to find similar column names
-            available_cols = list(df.columns)
-            suggestion_msg = f"\nAvailable columns in your CSV: {available_cols}"
-            error_msg = f"Your CSV file is missing some required columns: {missing_columns}.{suggestion_msg}\n\n"
-            error_msg += "This usually means either:\n"
-            error_msg += "1. The CSV file is from a different bank than selected\n"
-            error_msg += "2. The CSV file format has changed\n"
-            error_msg += "3. The CSV file was exported incorrectly\n\n"
-            error_msg += "Please check that you selected the correct bank and that the CSV file is properly exported."
-            raise ValueError(error_msg)
-        
-        return df
-
     def transform_transactions(self, df: pd.DataFrame, existing_columns: List[str]) -> List[Dict[str, Any]]:
         """Transform bank transactions to Tiller format based on existing columns."""
         transformed_transactions = []
@@ -637,14 +273,14 @@ class BaseImporter(TransactionImporter):
                 transformed_transactions.append(filtered_transaction)
                 
             except Exception as row_error:
-                print(f"Error processing row {index}: {row_error}")
-                print(f"Row data: {dict(row)}")
-                print("Skipping this transaction and continuing...")
+                logger.error(f"Error processing row {index}: {row_error}")
+                logger.debug(f"Row data: {dict(row)}")
+                logger.info("Skipping this transaction and continuing...")
                 continue
         
         return transformed_transactions
 
-    def import_transactions(self, csv_file: str, excel_file: str) -> tuple[bool, str]:
+    def import_transactions(self, csv_file: str, excel_file: str) -> Tuple[bool, str]:
         """Main import function."""
         try:
             # Initialize handlers
@@ -655,36 +291,33 @@ class BaseImporter(TransactionImporter):
             csv_handler.validate_file()
             
             # Read and validate CSV
-            print(f"Reading CSV file: {csv_file}")
+            logger.info(f"Reading CSV file: {csv_file}")
             df = csv_handler.read_csv()
             csv_handler.validate_columns(self.get_expected_columns())
-            print(f"Found {len(df)} transactions in CSV")
+            logger.info(f"Found {len(df)} transactions in CSV")
             
             # Load Excel file
             excel_handler.load_workbook()
             existing_columns = excel_handler.existing_columns
-            print(f"Excel file has {len(existing_columns)} columns: {existing_columns}")
+            logger.debug(f"Excel file has {len(existing_columns)} columns: {existing_columns}")
             
             # Transform transactions
-            print("Transforming transactions...")
+            logger.info("Transforming transactions...")
             transactions = self.transform_transactions(df, existing_columns)
             
             # Update Excel file
-            print(f"Updating Excel file: {excel_file}")            
-            excel_handler.update_transactions(transactions)
-            excel_handler.save()
+            logger.info(f"Updating Excel file: {excel_file}")            
+            count = excel_handler.update_transactions(transactions)
+            excel_handler.save()            
             
-            count = len(transactions)
             if count > 0:
-                print(f"Successfully imported {count} new transactions!")
+                logger.info(f"Successfully imported {count} new transactions!")
                 return True, f"Successfully imported {count} new transactions!"
             else:
-                print("No new transactions to import (all appear to be duplicates)")
+                logger.warning("No new transactions to import (all appear to be duplicates)")
                 return True, "No new transactions to import (all appear to be duplicates)"
             
         except Exception as e:
-            import traceback
-            # Print full traceback to console
-            print(f"Error: {str(e)}\nTraceback:\n{traceback.format_exc()}")
-            # Return only the error message without traceback
-            return False, f"Error: {str(e)}" 
+            logger.error(f"Error during import: {e}")
+            logger.debug(f"Traceback:\n{traceback.format_exc()}")
+            return False, str(e) 
