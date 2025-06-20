@@ -249,7 +249,7 @@ class BaseImporter(TransactionImporter):
                 
                 # Create transaction mapping
                 transaction = {
-                    'Date': trans_date,
+                    'Date': self.format_date_mdy(trans_date),
                     'Description': self.clean_description(self.get_column_value(row, 'Description')),
                     'Category': '',  # Will be empty for user to categorize
                     'Amount': amount,
