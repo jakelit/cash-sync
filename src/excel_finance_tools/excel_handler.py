@@ -222,7 +222,7 @@ formatting management in the code.
         elif isinstance(value, str) and value.strip():
             try:
                 # Try pandas to_datetime which handles many formats
-                parsed = pd.to_datetime(value, infer_datetime_format=True)
+                parsed = pd.to_datetime(value)
                 return parsed.to_pydatetime() if isinstance(parsed, pd.Timestamp) else parsed
             except Exception as e:
                 logger.warning(f"Could not parse date '{value}': {e}")
@@ -417,6 +417,7 @@ formatting management in the code.
         first_data_row = min_row + 1
         rules_updated = 0
         rules_to_recreate = []
+        cf_rules_to_remove = []
         
         # Process existing conditional formatting rules
         for cf in list(self.ws.conditional_formatting):
@@ -437,8 +438,8 @@ formatting management in the code.
                             rules_to_recreate.append((new_range_str, rule))
                             rules_updated += 1
                         
-                        # Remove old rule
-                        self.ws.conditional_formatting.remove(cf)
+                        # Mark for removal
+                        cf_rules_to_remove.append(cf)
                         logger.debug(f"Extended conditional formatting from {range_str} to {new_range_str}")
                         break
                         
@@ -446,9 +447,25 @@ formatting management in the code.
                     logger.error(f"Failed to process conditional formatting: {e}")
                     continue
         
+        # Remove old rules using the correct method
+        for cf_rule in cf_rules_to_remove:
+            try:
+                # Use the internal _cf_rules dictionary to remove rules
+                if hasattr(self.ws.conditional_formatting, '_cf_rules'):
+                    if cf_rule in self.ws.conditional_formatting._cf_rules:
+                        del self.ws.conditional_formatting._cf_rules[cf_rule]
+                else:
+                    # Fallback: try to clear and rebuild all rules
+                    logger.warning("Could not remove specific conditional formatting rule, skipping removal")
+            except Exception as e:
+                logger.warning(f"Could not remove conditional formatting rule: {e}")
+        
         # Recreate rules with extended ranges
         for range_str, rule in rules_to_recreate:
-            self.ws.conditional_formatting.add(range_str, rule)
+            try:
+                self.ws.conditional_formatting.add(range_str, rule)
+            except Exception as e:
+                logger.error(f"Failed to recreate conditional formatting rule: {e}")
         
         if rules_updated > 0:
             logger.debug(f"Extended {rules_updated} conditional formatting rules")
