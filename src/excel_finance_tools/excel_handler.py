@@ -2,15 +2,17 @@
 This module provides the ExcelHandler class, a comprehensive utility for
 interacting with the finance Excel workbook.
 """
+import traceback
+from copy import copy
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet.datavalidation import DataValidation
-from typing import List, Dict, Any, Optional
+
 from .duplicate_checker import DuplicateChecker
-from datetime import datetime
-from copy import copy
-import traceback
 from .logger import logger
 
 class ExcelHandler:
@@ -34,7 +36,7 @@ class ExcelHandler:
     
     def load_workbook(self):
         """Load the Excel workbook and locate the Transactions table."""
-        logger.info(f"Loading workbook: {self.excel_file}")
+        logger.info("Loading workbook: %s", self.excel_file)
         self.wb = load_workbook(self.excel_file)
         
         # Find the Transactions table across all worksheets
@@ -44,12 +46,12 @@ class ExcelHandler:
         for sheet_name in self.wb.sheetnames:
             ws = self.wb[sheet_name]
             if ws.tables:
-                logger.debug(f"Found {len(ws.tables)} table(s) in worksheet '{sheet_name}': {list(ws.tables.keys())}")
+                logger.debug("Found %d table(s) in worksheet '%s': %s", len(ws.tables), sheet_name, list(ws.tables.keys()))
                 for table_name in ws.tables:
                     if table_name.lower() == 'transactions':
                         transactions_table = ws.tables[table_name]
                         table_worksheet = ws
-                        logger.info(f"Found 'Transactions' table in worksheet '{sheet_name}'")
+                        logger.info("Found 'Transactions' table in worksheet '%s'", sheet_name)
                         break
                 if transactions_table:
                     break
@@ -60,7 +62,7 @@ class ExcelHandler:
         self.table = transactions_table
         self.ws = table_worksheet
         
-        logger.debug(f"Table range: {self.table.ref}")
+        logger.debug("Table range: %s", self.table.ref)
         self._load_existing_data()
         self._build_column_mapping()
     
@@ -111,12 +113,12 @@ formatting management in the code.
         self.header_row = min_row
         
         self.existing_columns = list(self.existing_df.columns)
-        logger.info(f"Loaded {len(self.existing_df)} existing transactions")
-        logger.debug(f"Table columns: {self.existing_columns}")
+        logger.info("Loaded %d existing transactions", len(self.existing_df))
+        logger.debug("Table columns: %s", self.existing_columns)
     
     def _build_column_mapping(self):
         """Build mapping between transaction columns and Excel column indices."""
-        min_col, min_row, max_col, max_row = range_boundaries(self.table.ref)
+        min_col, _, _, _ = range_boundaries(self.table.ref)
         
         # Create case-insensitive mapping
         self.column_mapping = {}
@@ -126,18 +128,18 @@ formatting management in the code.
             self.column_mapping[col_name] = excel_col_idx
             self.column_mapping[col_name.lower()] = excel_col_idx
         
-        logger.debug(f"Built column mapping: {dict((k, v) for k, v in self.column_mapping.items() if k.islower())}")
+        logger.debug("Built column mapping: %s", dict((k, v) for k, v in self.column_mapping.items() if k.islower()))
     
     def get_autocat_rules(self) -> Optional[pd.DataFrame]:
         """Load the AutoCat rules from the 'AutoCat' worksheet."""
         logger.info("Loading AutoCat rules...")
         try:
             rules_df = pd.read_excel(self.excel_file, sheet_name='AutoCat')
-            logger.info(f"Loaded {len(rules_df)} rules from 'AutoCat' sheet.")
+            logger.info("Loaded %d rules from 'AutoCat' sheet.", len(rules_df))
             return rules_df
-        except Exception as e:
-            logger.warning(f"Could not load 'AutoCat' worksheet: {e}")
-            logger.debug(f"Could not find 'AutoCat' sheet. This is not an error if you don't use this feature.")
+        except (ValueError, FileNotFoundError, OSError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
+            logger.warning("Could not load 'AutoCat' worksheet: %s", e)
+            logger.debug("Could not find 'AutoCat' sheet. This is not an error if you don't use this feature.")
             return None
 
     def update_cell(self, df_index: int, column_name: str, value: Any):
@@ -151,7 +153,7 @@ formatting management in the code.
         """
         try:
             if column_name not in self.column_mapping:
-                logger.warning(f"Column '{column_name}' not found in the Excel table. Cannot update cell.")
+                logger.warning("Column '%s' not found in the Excel table. Cannot update cell.", column_name)
                 return
             
             # Excel is 1-based, header is at self.header_row, data starts below it.
@@ -159,7 +161,7 @@ formatting management in the code.
             excel_row = self.header_row + 1 + df_index
             excel_col = self.column_mapping[column_name]
             
-            logger.debug(f"Updating cell at (row={excel_row}, col={excel_col}) to '{value}'")
+            logger.debug("Updating cell at (row=%d, col=%d) to '%s'", excel_row, excel_col, value)
             
             cell = self.ws.cell(row=excel_row, column=excel_col)
             cell.value = value
@@ -167,8 +169,8 @@ formatting management in the code.
             # Also update the in-memory dataframe to keep it consistent
             self.existing_df.loc[df_index, column_name] = value
 
-        except Exception as e:
-            logger.error(f"Failed to update cell at index {df_index}, column '{column_name}'")
+        except (ValueError, TypeError, AttributeError, KeyError, OSError):
+            logger.error("Failed to update cell at index %d, column '%s'", df_index, column_name)
             logger.debug(traceback.format_exc())
 
     def update_transactions(self, transactions: List[Dict[str, Any]]) -> int:
@@ -186,7 +188,7 @@ formatting management in the code.
             logger.warning("No new transactions to import (all appear to be duplicates)")
             return 0
         
-        logger.info(f"Adding {len(filtered_transactions)} new transactions...")
+        logger.info("Adding %d new transactions...", len(filtered_transactions))
         
         # Validate and prepare transactions
         prepared_transactions = self._prepare_transactions(filtered_transactions)
@@ -194,7 +196,7 @@ formatting management in the code.
         # Add transactions to the table using proper method
         rows_added = self._add_transactions_to_table(prepared_transactions)
         
-        logger.info(f"Successfully added {rows_added} transactions to the table")
+        logger.info("Successfully added %d transactions to the table", rows_added)
         return rows_added
     
     def _prepare_transactions(self, transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -209,7 +211,7 @@ formatting management in the code.
                 # Find matching column in Excel table (case-insensitive)
                 excel_col_key = self._find_matching_column(key)
                 if excel_col_key is None:
-                    logger.warning(f"Transaction column '{key}' not found in Excel table - skipping")
+                    logger.warning("Transaction column '%s' not found in Excel table - skipping", key)
                     continue
                 
                 # Convert value to appropriate type
@@ -219,7 +221,7 @@ formatting management in the code.
             if prepared_transaction:  # Only add if we have valid columns
                 prepared.append(prepared_transaction)
         
-        logger.debug(f"Prepared {len(prepared)} transactions for insertion")
+        logger.debug("Prepared %d transactions for insertion", len(prepared))
         return prepared
     
     def _find_matching_column(self, transaction_column: str) -> Optional[str]:
@@ -252,8 +254,7 @@ formatting management in the code.
             try:
                 if '.' in value:
                     return float(value)
-                else:
-                    return int(value)
+                return int(value)
             except ValueError:
                 pass
         
@@ -280,8 +281,8 @@ formatting management in the code.
                 # Try pandas to_datetime which handles many formats
                 parsed = pd.to_datetime(value)
                 return parsed.to_pydatetime() if isinstance(parsed, pd.Timestamp) else parsed
-            except Exception as e:
-                logger.warning(f"Could not parse date '{value}': {e}")
+            except (ValueError, TypeError, OSError) as e:
+                logger.warning("Could not parse date '%s': %s", value, e)
                 return None
         
         return None
@@ -331,7 +332,7 @@ formatting management in the code.
         new_max_row = current_max_row + rows_inserted
         new_table_range = f"{get_column_letter(min_col)}{min_row}:{get_column_letter(max_col)}{new_max_row}"
         self.table.ref = new_table_range
-        logger.debug(f"Updated table range to: {new_table_range}")
+        logger.debug("Updated table range to: %s", new_table_range)
         
         # Extend formatting and validation rules
         self._extend_conditional_formatting(min_col, min_row, max_col, current_max_row, new_max_row)
@@ -383,6 +384,7 @@ formatting management in the code.
                     return self._parse_date_value(value)
         return None
     
+    # pylint: disable=bare-except 
     def _parse_excel_date(self, cell_value: Any) -> Optional[datetime]:
         """Parse date value from Excel cell."""
         if cell_value is None:
@@ -448,7 +450,7 @@ formatting management in the code.
             elif 'description' in key.lower() or 'desc' in key.lower():
                 desc_val = str(value)[:50] if value else 'No Description'
         
-        logger.debug(f"  Inserted at row {row_num}: {date_val} | {amount_val} | {desc_val}")
+        logger.debug("  Inserted at row %d: %s | %s | %s", row_num, date_val, amount_val, desc_val)
     
     def _copy_row_formatting(self, source_row: int, target_row: int, min_col: int, max_col: int):
         """Copy formatting from source row to target row."""
@@ -465,9 +467,11 @@ formatting management in the code.
                     target_cell.number_format = source_cell.number_format
                     target_cell.protection = copy(source_cell.protection)
                     target_cell.alignment = copy(source_cell.alignment)
-            except Exception as e:
-                logger.warning(f"Failed to copy formatting from row {source_row} to {target_row}, col {col}: {e}")
+            except (ValueError, TypeError, AttributeError, KeyError, OSError) as e:
+                logger.warning("Failed to copy formatting from row %d to %d, col %d: %s", source_row, target_row, col, e)
     
+    # pylint: disable=protected-access
+    # pylint: disable=too-many-branches
     def _extend_conditional_formatting(self, min_col: int, min_row: int, max_col: int, old_max_row: int, new_max_row: int):
         """Extend conditional formatting rules that apply to entire table columns."""
         first_data_row = min_row + 1
@@ -496,11 +500,11 @@ formatting management in the code.
                         
                         # Mark for removal
                         cf_rules_to_remove.append(cf)
-                        logger.debug(f"Extended conditional formatting from {range_str} to {new_range_str}")
+                        logger.debug("Extended conditional formatting from %s to %s", range_str, new_range_str)
                         break
                         
-                except Exception as e:
-                    logger.error(f"Failed to process conditional formatting: {e}")
+                except (ValueError, TypeError, AttributeError, KeyError, OSError) as e:
+                    logger.error("Failed to process conditional formatting: %s", e)
                     continue
         
         # Remove old rules using the correct method
@@ -513,18 +517,18 @@ formatting management in the code.
                 else:
                     # Fallback: try to clear and rebuild all rules
                     logger.warning("Could not remove specific conditional formatting rule, skipping removal")
-            except Exception as e:
-                logger.warning(f"Could not remove conditional formatting rule: {e}")
+            except (ValueError, TypeError, AttributeError, KeyError, OSError) as e:
+                logger.warning("Could not remove conditional formatting rule: %s", e)
         
         # Recreate rules with extended ranges
         for range_str, rule in rules_to_recreate:
             try:
                 self.ws.conditional_formatting.add(range_str, rule)
-            except Exception as e:
-                logger.error(f"Failed to recreate conditional formatting rule: {e}")
+            except (ValueError, TypeError, AttributeError, KeyError, OSError) as e:
+                logger.error("Failed to recreate conditional formatting rule: %s", e)
         
         if rules_updated > 0:
-            logger.debug(f"Extended {rules_updated} conditional formatting rules")
+            logger.debug("Extended %d conditional formatting rules", rules_updated)
     
     def _extend_data_validation(self, min_col: int, min_row: int, max_col: int, old_max_row: int, new_max_row: int):
         """Extend data validation rules that apply to entire table columns."""
@@ -547,11 +551,11 @@ formatting management in the code.
                         new_range_str = f"{get_column_letter(dv_min_col)}{first_data_row}:{get_column_letter(dv_max_col)}{new_max_row}"
                         validations_to_recreate.append((dv, new_range_str))
                         rules_updated += 1
-                        logger.debug(f"Will recreate data validation for range {new_range_str}")
+                        logger.debug("Will recreate data validation for range %s", new_range_str)
                         break
                         
-                except Exception as e:
-                    logger.error(f"Error processing data validation: {e}")
+                except (ValueError, TypeError, AttributeError, KeyError, OSError) as e:
+                    logger.error("Error processing data validation: %s", e)
                     continue
         
         # Remove old validations and add new ones
@@ -576,11 +580,11 @@ formatting management in the code.
                 new_dv.add(new_range_str)
                 self.ws.data_validations.append(new_dv)
                 
-            except Exception as e:
-                logger.error(f"Failed to recreate data validation: {e}")
+            except (ValueError, TypeError, AttributeError, KeyError, OSError) as e:
+                logger.error("Failed to recreate data validation: %s", e)
         
         if rules_updated > 0:
-            logger.debug(f"Extended {rules_updated} data validation rules")
+            logger.debug("Extended %d data validation rules", rules_updated)
     
     def _populate_table_row(self, row_num: int, transaction: Dict[str, Any], start_col: int):
         """Populate a table row with transaction data, handling extra columns gracefully."""
@@ -620,17 +624,17 @@ formatting management in the code.
             return trans_date if trans_date else datetime.min
         
         sorted_txns = sorted(transactions, key=get_date_key, reverse=True)
-        logger.debug(f"Sorted {len(sorted_txns)} transactions by date (newest first)")
+        logger.debug("Sorted %d transactions by date (newest first)", len(sorted_txns))
         return sorted_txns
     
     def save(self):
         """Save the workbook."""
-        logger.info(f"Saving workbook to: {self.excel_file}")
+        logger.info("Saving workbook to: %s", self.excel_file)
         try:
             self.wb.save(self.excel_file)
             logger.info("Workbook saved successfully")
-        except Exception as e:
-            logger.error(f"Failed to save workbook: {e}")
+        except (OSError, ValueError, AttributeError) as e:
+            logger.error("Failed to save workbook: %s", e)
             raise
         finally:
             if self.wb:

@@ -79,7 +79,7 @@ class AutoCategorizer:
 
             return True, f"Successfully categorized {categorized_count} transactions!"
 
-        except Exception as e:
+        except (ValueError, FileNotFoundError, PermissionError, OSError) as e:
             logger.error("An error occurred during auto-categorization: %s", e)
             logger.debug(traceback.format_exc())
             return False, f"An error occurred: {e}"
@@ -101,6 +101,7 @@ class AutoCategorizer:
         return df[uncategorized_mask]
 
     def _load_and_parse_rules(self):
+        """Load and parse categorization rules from the AutoCat sheet."""
         rules_df = self.excel_handler.get_autocat_rules()
         if rules_df is None or rules_df.empty:
             self.rules = []
@@ -111,51 +112,57 @@ class AutoCategorizer:
             self.rules = []
             return
 
+        # A mapping of user-friendly names to internal types
+        valid_comparisons = {
+            'contains': 'contains',
+            'not contains': 'not_contains',
+            'equals': 'equals',
+            'not equals': 'not_equals',
+            'starts with': 'starts_with',
+            'ends with': 'ends_with',
+            'min': 'min',
+            'max': 'max',
+            'between': 'between',
+            'regex': 'regex'
+        }
+
         for _, row in rules_df.iterrows():
-            rule = {'category': row['Category'], 'conditions': [], 'auto_fill': {}}
-            
-            # A mapping of user-friendly names to internal types
-            valid_comparisons = {
-                'contains': 'contains',
-                'not contains': 'not_contains',
-                'equals': 'equals',
-                'not equals': 'not_equals',
-                'starts with': 'starts_with',
-                'ends with': 'ends_with',
-                'min': 'min',
-                'max': 'max',
-                'between': 'between',
-                'regex': 'regex'
-            }
-
-            for col_name, value in row.items():
-                if pd.isna(value) or col_name == 'Category':
-                    continue
-
-                is_rule_column = False
-                # Check if the column name ends with a valid comparison type
-                for comp_display, comp_internal in valid_comparisons.items():
-                    if col_name.lower().endswith(' ' + comp_display):
-                        # It's a rule column
-                        field = col_name[:-(len(comp_display) + 1)] # Extract the field name
-                        if field in self.excel_handler.existing_columns:
-                            rule['conditions'].append({'field': field, 'type': comp_internal, 'value': value})
-                        else:
-                            logger.warning(f"Rule column '{col_name}' ignored: '{field}' not found in Transactions table.")
-                        is_rule_column = True
-                        break # Move to next column
-                
-                if is_rule_column:
-                    continue
-
-                # If it wasn't a rule column, check if it's an auto-fill column
-                if col_name in self.excel_handler.existing_columns:
-                    rule['auto_fill'][col_name] = value
-                else:
-                    logger.warning(f"Column '{col_name}' in 'AutoCat' sheet is not a valid rule or auto-fill column and will be ignored.")
-            
+            rule = self._parse_single_rule(row, valid_comparisons)
             if rule['conditions']:
                 self.rules.append(rule)
+
+    def _parse_single_rule(self, row: pd.Series, valid_comparisons: dict) -> dict:
+        """Parse a single rule from a row in the AutoCat sheet."""
+        rule = {'category': row['Category'], 'conditions': [], 'auto_fill': {}}
+        
+        for col_name, value in row.items():
+            if pd.isna(value) or col_name == 'Category':
+                continue
+
+            # Check if it's a rule column
+            rule_condition = self._extract_rule_condition(col_name, value, valid_comparisons)
+            if rule_condition:
+                rule['conditions'].append(rule_condition)
+                continue
+
+            # Check if it's an auto-fill column
+            if col_name in self.excel_handler.existing_columns:
+                rule['auto_fill'][col_name] = value
+            else:
+                logger.warning("Column '%s' in 'AutoCat' sheet is not a valid rule or auto-fill column and will be ignored.", col_name)
+        
+        return rule
+
+    def _extract_rule_condition(self, col_name: str, value: any, valid_comparisons: dict) -> dict:
+        """Extract a rule condition from a column name and value."""
+        for comp_display, comp_internal in valid_comparisons.items():
+            if col_name.lower().endswith(' ' + comp_display):
+                field = col_name[:-(len(comp_display) + 1)]  # Extract the field name
+                if field in self.excel_handler.existing_columns:
+                    return {'field': field, 'type': comp_internal, 'value': value}
+                logger.warning("Rule column '%s' ignored: '%s' not found in Transactions table.", col_name, field)
+                break
+        return None
 
     def _apply_rules_to_transactions(self, transactions_df: pd.DataFrame) -> int:
         categorized_count = 0
@@ -228,7 +235,7 @@ class AutoCategorizer:
         return self._regex_cache[rule_value].search(str(trans_value)) is not None
 
     def _update_transaction(self, df_index: int, category: str, auto_fill_values: Dict):
-        logger.debug(f"Updating transaction at index {df_index} with Category '{category}' and auto-fills: {auto_fill_values}")
+        logger.debug("Updating transaction at index %d with Category '%s' and auto-fills: %s", df_index, category, auto_fill_values)
         self.excel_handler.update_cell(df_index, 'Category', category)
         for col, value in auto_fill_values.items():
             self.excel_handler.update_cell(df_index, col, value)

@@ -7,15 +7,14 @@ the shared logic for reading CSVs, finding and validating columns, checking
 for duplicates, and writing new transactions to Excel.
 """
 import os
-import pandas as pd
-from datetime import datetime, timedelta
 import re
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Tuple
 import traceback
+from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Tuple
+import pandas as pd
 from .csv_handler import CSVHandler
 from .excel_handler import ExcelHandler
-from .importer_interface import TransactionImporter
 from .logger import logger
 
 
@@ -114,9 +113,9 @@ class BaseImporter(ABC):
                 return datetime.now().date()
             return date
                 
-        except Exception as date_error:
-            logger.error(f"Date parsing error: {date_error}")
-            logger.debug(f"Raw date value: '{date_str}'")
+        except (ValueError, TypeError, OSError) as date_error:
+            logger.error("Date parsing error: %s", date_error)
+            logger.debug("Raw date value: '%s'", date_str)
             return datetime.now().date()
 
     def validate_files(self, csv_file, excel_file):
@@ -132,34 +131,6 @@ class BaseImporter(ABC):
         
         if not excel_file.lower().endswith(('.xlsx', '.xls')):
             raise ValueError("Second file must be an Excel file")
-    
-    def read_csv(self, csv_file):
-        """Read and parse CSV file with multiple encoding attempts."""
-        try:
-            # Try different encodings in case of special characters
-            encodings = ['utf-8', 'latin-1', 'cp1252']
-            df = None
-            
-            for encoding in encodings:
-                try:
-                    df = pd.read_csv(csv_file, encoding=encoding)
-                    break
-                except UnicodeDecodeError:
-                    continue
-            
-            if df is None:
-                raise Exception("Could not read CSV file with any supported encoding")
-            
-            # Strip whitespace from column names
-            df.columns = df.columns.str.strip()
-            
-            # Remove any completely empty rows
-            df = df.dropna(how='all')
-            
-            return df
-            
-        except Exception as e:
-            raise Exception(f"Error reading CSV file: {str(e)}") from e
     
     def get_week_start(self, date):
         """Get the first day of the week (Sunday) for a given date."""
@@ -288,9 +259,9 @@ class BaseImporter(ABC):
                 
                 transformed_transactions.append(filtered_transaction)
                 
-            except Exception as row_error:
-                logger.error(f"Error processing row {index}: {row_error}")
-                logger.debug(f"Row data: {dict(row)}")
+            except (ValueError, TypeError, AttributeError, KeyError) as row_error:
+                logger.error("Error processing row %d: %s", index, row_error)
+                logger.debug("Row data: %s", dict(row))
                 logger.info("Skipping this transaction and continuing...")
                 continue
         
@@ -307,33 +278,34 @@ class BaseImporter(ABC):
             csv_handler.validate_file()
             
             # Read and validate CSV
-            logger.info(f"Reading CSV file: {csv_file}")
+            logger.info("Reading CSV file: %s", csv_file)
             df = csv_handler.read_csv()
             csv_handler.validate_columns(self.get_expected_columns())
-            logger.info(f"Found {len(df)} transactions in CSV")
+            logger.info("Found %d transactions in CSV", len(df))
             
             # Load Excel file
             excel_handler.load_workbook()
             existing_columns = excel_handler.existing_columns
-            logger.debug(f"Excel file has {len(existing_columns)} columns: {existing_columns}")
+            logger.debug("Excel file has %d columns: %s", len(existing_columns), existing_columns)
             
             # Transform transactions
             logger.info("Transforming transactions...")
             transactions = self.transform_transactions(df, existing_columns)
             
             # Update Excel file
-            logger.info(f"Updating Excel file: {excel_file}")            
+            logger.info("Updating Excel file: %s", excel_file)            
             count = excel_handler.update_transactions(transactions)
             excel_handler.save()            
             
             if count > 0:
-                logger.info(f"Successfully imported {count} new transactions!")
+                logger.info("Successfully imported %d new transactions!", count)
                 return True, f"Successfully imported {count} new transactions!"
-            else:
-                logger.warning("No new transactions to import (all appear to be duplicates)")
-                return True, "No new transactions to import (all appear to be duplicates)"
             
-        except Exception as e:
-            logger.error(f"Error during import: {e}")
-            logger.debug(f"Traceback:\n{traceback.format_exc()}")
+            logger.warning("No new transactions to import (all appear to be duplicates)")
+            return True, "No new transactions to import (all appear to be duplicates)"
+            
+        except (ValueError, FileNotFoundError, OSError, pd.errors.EmptyDataError, 
+                pd.errors.ParserError, AttributeError, KeyError) as e:
+            logger.error("Error during import: %s", e)
+            logger.debug("Traceback:\n%s", traceback.format_exc())
             return False, str(e) 

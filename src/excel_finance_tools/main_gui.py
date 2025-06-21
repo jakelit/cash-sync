@@ -44,6 +44,7 @@ class ExcelFinanceToolsApp(tk.Tk):
         self.show_frame("MainMenuFrame")
 
     def setup_styles(self):
+        """Configure the visual styles for the application."""
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("TFrame", background="#f0f0f0")
@@ -66,6 +67,7 @@ class ExcelFinanceToolsApp(tk.Tk):
         style.configure("Cancel.TButton", font=('Arial', 11), padding=10)
 
     def show_frame(self, cont_name):
+        """Switch to the specified frame and call its on_show method if available."""
         frame = self.frames[cont_name]
         frame.tkraise()
         # If the frame has an 'on_show' method, call it
@@ -138,6 +140,7 @@ class MainMenuFrame(ttk.Frame):
         actions_frame.rowconfigure(0, weight=1)
     
     def create_action_card(self, parent, title, description, icon, command):
+        """Create an action card widget with icon, title, description, and button."""
         card_frame = ttk.Frame(parent, style="Card.TFrame")
         card_frame.columnconfigure(0, weight=1)
 
@@ -155,10 +158,12 @@ class MainMenuFrame(ttk.Frame):
         action_btn = ttk.Button(card_frame, text="Open", command=command, style="ActionButton.TButton")
         action_btn.grid(row=3, column=0, pady=(0, 30))
 
-        def on_enter(event):
+        def on_enter(_event):
+            """Handle mouse enter event for card highlighting."""
             card_frame.state(['active'])
-        def on_leave(event):
-            card_frame.state(['!active'])
+        def on_leave(_event):
+            """Handle mouse leave event for card highlighting."""
+            card_frame.state(['!active'])   
 
         card_frame.bind("<Enter>", on_enter)
         card_frame.bind("<Leave>", on_leave)
@@ -169,6 +174,7 @@ class MainMenuFrame(ttk.Frame):
         return card_frame
 
     def configure_styles(self):
+        """Configure the visual styles for the main menu frame."""
         style = ttk.Style()
         style.theme_use('clam')
         style.configure("TFrame", background="#f0f0f0")

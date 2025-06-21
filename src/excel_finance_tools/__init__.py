@@ -45,6 +45,13 @@ BANKS = {
 }
 
 def main():
+    """Main entry point for the Excel Finance Tools application.
+    
+    Handles command-line arguments and routes to appropriate functionality:
+    - import: Import transactions from CSV to Excel
+    - autocat: Auto-categorize transactions in Excel
+    - GUI: Launch the graphical user interface (default)
+    """
     parser = argparse.ArgumentParser(
         description='Excel Finance Tools.',
         epilog='''
@@ -79,9 +86,9 @@ Examples:
         success, message = importer.import_transactions(args.csv_file, args.excel_file)
         logger.info("=" * 40)
         if success:
-            logger.info(f"Import completed: {message}")
+            logger.info("Import completed: %s", message)
         else:
-            logger.error(f"Import failed: {message}")
+            logger.error("Import failed: %s", message)
             sys.exit(1)
             
     elif args.command == 'autocat':
@@ -91,9 +98,9 @@ Examples:
         success, message = categorizer.run_auto_categorization()
         logger.info("=" * 40)
         if success:
-            logger.info(f"Auto-categorization completed: {message}")
+            logger.info("Auto-categorization completed: %s", message)
         else:
-            logger.error(f"Auto-categorization failed: {message}")
+            logger.error("Auto-categorization failed: %s", message)
             sys.exit(1)
             
     else: # This handles no command being provided
@@ -102,8 +109,8 @@ Examples:
         try:
             app = ExcelFinanceToolsApp()
             app.run()
-        except Exception as e:
-            logger.error(f"Error starting GUI: {e}")
+        except (ImportError, ModuleNotFoundError, OSError) as e:
+            logger.error("Error starting GUI: %s", e)
             logger.error("Please ensure tkinter is installed: pip install tkinter")
             sys.exit(1)
 

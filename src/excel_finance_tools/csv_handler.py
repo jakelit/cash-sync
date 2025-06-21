@@ -2,8 +2,8 @@
 This module provides the CSVHandler class for reading and validating CSV files.
 """
 import os
-import pandas as pd
 from typing import List
+import pandas as pd
 
 class CSVHandler:
     """A utility class to handle reading and validating CSV files."""
@@ -34,7 +34,7 @@ class CSVHandler:
                     continue
             
             if df is None:
-                raise Exception("Could not read CSV file with any supported encoding")
+                raise ValueError("Could not read CSV file with any supported encoding")
             
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
@@ -44,8 +44,8 @@ class CSVHandler:
             
             return df
             
-        except Exception as e:            
-            raise Exception(f"Error reading CSV file: {str(e)}") from e
+        except (ValueError, OSError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:            
+            raise ValueError(f"Error reading CSV file: {str(e)}") from e
     
     def validate_columns(self, expected_columns: List[str]) -> None:
         """Validate that all expected columns are present in the CSV."""

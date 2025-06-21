@@ -2,8 +2,9 @@
 This module provides the DuplicateChecker class to identify and filter
 duplicate transactions.
 """
-import pandas as pd
 from typing import List, Dict, Any
+import pandas as pd
+
 
 class DuplicateChecker:
     """
@@ -16,9 +17,6 @@ class DuplicateChecker:
         """Check for potential duplicate transactions and return filtered list."""
         if existing_df.empty or not new_transactions:
             return new_transactions
-        
-        # Convert new transactions to DataFrame for easier comparison
-        new_df = pd.DataFrame(new_transactions)
         
         # Create a comparison key using date, amount, and first 20 chars of Full Description
         # Note: Using Full Description instead of Description because Description is often changed by users. 

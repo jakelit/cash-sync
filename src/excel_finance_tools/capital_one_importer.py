@@ -66,7 +66,7 @@ class CapitalOneImporter(BaseImporter):
             
             return amount
             
-        except Exception as e:
-            logger.error(f"Error parsing amount '{amount_str}': {e}")
+        except (ValueError, TypeError) as e:
+            logger.error("Error parsing amount '%s': %s", amount_str, e)
             return 0.0 
     

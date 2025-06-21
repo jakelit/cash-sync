@@ -8,13 +8,14 @@ for the import user interface, and the main `ImporterGUI` class which acts
 as a controller.
 """
 
+import json
 import os
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import json
-from .capital_one_importer import CapitalOneImporter
+
 from .ally_importer import AllyImporter
+from .capital_one_importer import CapitalOneImporter
 from .logger import logger
 
 class ImporterGUIFrame(ttk.Frame):
@@ -59,7 +60,7 @@ class ImporterGUIFrame(ttk.Frame):
         """Load previously saved file paths from config file."""
         try:
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                 
                 csv_path = config.get('last_csv_path', '')
@@ -75,8 +76,8 @@ class ImporterGUIFrame(ttk.Frame):
                 
                 if excel_path and os.path.exists(excel_path):
                     self.excel_var.set(excel_path)
-        except Exception as e:
-            logger.error(f"Error loading settings: {e}")
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            logger.error("Error loading settings: %s", e)
 
     def save_settings(self):
         """Save current file paths to config file."""
@@ -86,12 +87,13 @@ class ImporterGUIFrame(ttk.Frame):
                 'last_excel_path': self.excel_var.get(),
                 'last_bank': self.bank_var.get()
             }
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving settings: {e}")
+        except (OSError, ValueError) as e:
+            logger.error("Error saving settings: %s", e)
 
     def create_widgets(self):
+        """Create and layout all GUI widgets."""
         main_frame = ttk.Frame(self, padding="30", style="TFrame")
         main_frame.grid(row=0, column=0, sticky="nsew")
         self.columnconfigure(0, weight=1)
@@ -143,12 +145,14 @@ class ImporterGUIFrame(ttk.Frame):
         self.csv_var.trace('w', lambda *args: self.update_file_status())
         self.excel_var.trace('w', lambda *args: self.update_file_status())
     
-    def on_bank_change(self, event=None):
+    def on_bank_change(self, _=None):
+        """Handle bank selection change."""
         selected_bank = self.bank_var.get()
         self.importer = self.banks[selected_bank]()
         self.update_file_status()
     
     def update_file_status(self):
+        """Update the status indicators for CSV and Excel files."""
         csv_path = self.csv_var.get().strip()
         if csv_path and os.path.exists(csv_path):
             self.csv_status.config(text="✓ CSV file found", foreground="green")
@@ -162,6 +166,7 @@ class ImporterGUIFrame(ttk.Frame):
             self.excel_status.config(text="✗ Excel file not found", foreground="red")
     
     def browse_csv(self):
+        """Open file dialog to browse for CSV file."""
         filetypes = [('CSV files', '*.csv'), ('All files', '*.*')]
         initial_dir = os.path.dirname(self.csv_var.get()) if self.csv_var.get() and os.path.exists(os.path.dirname(self.csv_var.get())) else str(Path.home() / "Downloads")
         filename = filedialog.askopenfilename(title="Select Bank CSV File", filetypes=filetypes, initialdir=initial_dir)
@@ -169,6 +174,7 @@ class ImporterGUIFrame(ttk.Frame):
             self.csv_var.set(filename)
     
     def browse_excel(self):
+        """Open file dialog to browse for Excel file."""
         filetypes = [('Excel files', '*.xlsx'), ('All files', '*.*')]
         initial_dir = os.path.dirname(self.excel_var.get()) if self.excel_var.get() and os.path.exists(os.path.dirname(self.excel_var.get())) else str(Path.home() / "Documents")
         filename = filedialog.askopenfilename(title="Select Tiller Excel File", filetypes=filetypes, initialdir=initial_dir)
@@ -176,6 +182,7 @@ class ImporterGUIFrame(ttk.Frame):
             self.excel_var.set(filename)
             
     def import_transactions(self):
+        """Import transactions from CSV to Excel file."""
         self.save_settings()
         
         csv_path = self.csv_var.get()
@@ -194,6 +201,6 @@ class ImporterGUIFrame(ttk.Frame):
             else:
                 messagebox.showerror("Error", message)
                 
-        except Exception as e:
-            logger.error(f"Error during import: {e}")
+        except (OSError, ValueError, FileNotFoundError, PermissionError) as e:
+            logger.error("Error during import: %s", e)
             messagebox.showerror("Import Failed", f"An error occurred:\n{str(e)}")

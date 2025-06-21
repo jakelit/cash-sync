@@ -49,8 +49,8 @@ def setup_logger(name: str = 'excel_finance_tools',
         Configured logger instance
     """
     # Create logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    log_instance = logging.getLogger(name)
+    log_instance.setLevel(logging.DEBUG)
     
     # Create logs directory if it doesn't exist
     if log_file is None:
@@ -71,10 +71,10 @@ def setup_logger(name: str = 'excel_finance_tools',
     console_handler.setFormatter(console_formatter)
     
     # Add handlers to logger
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    log_instance.addHandler(file_handler)
+    log_instance.addHandler(console_handler)
     
-    return logger
+    return log_instance
 
 # Create default logger instance
 logger = setup_logger() 

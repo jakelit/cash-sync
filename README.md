@@ -67,6 +67,7 @@ cd excelFinanceTools
 2. Create and activate a virtual environment:
 ```bash
 python -m venv .venv
+
 # On macOS/Linux:
 source .venv/bin/activate
 
@@ -74,10 +75,15 @@ source .venv/bin/activate
 .venv\Scripts\activate
 ```
 
-3. Install development dependencies:
+3. Install **both** runtime and development dependencies:
 ```bash
+# Install runtime dependencies (required for the application to work)
+pip install -r requirements.txt
+
+# Install development dependencies (for testing, linting, etc.)
 pip install -r requirements-dev.txt
 ```
+
 ### Running Tests and Checks
 
 Run all tests and code quality checks:
@@ -93,8 +99,23 @@ pylint src/           # Run code quality checks
 
 ### Requirements Files
 
-- `requirements.txt`: Runtime dependencies (pandas, openpyxl)
-- `requirements-dev.txt`: Development tools (pytest, pylint, etc.)
+This project uses separate requirements files to distinguish between runtime and development dependencies:
+
+- **`requirements.txt`**: Runtime dependencies needed to run the application
+  - `pandas`: Data manipulation and analysis
+  - `openpyxl`: Excel file reading and writing
+
+- **`requirements-dev.txt`**: Development tools and testing dependencies
+  - `pytest`: Testing framework
+  - `pylint`: Code quality and style checking
+  - `pytest-cov`: Test coverage reporting
+  - `black`: Code formatting
+  - `flake8`: Linting
+  - `mypy`: Type checking
+  - `sphinx`: Documentation generation
+  - `sphinx-rtd-theme`: Documentation theme
+
+**Note**: For production deployments, only `requirements.txt` is needed. Development environments should install both files.
 
 ## Contributing
 

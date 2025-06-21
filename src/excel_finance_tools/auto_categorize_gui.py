@@ -1,3 +1,9 @@
+"""
+This module provides the graphical user interface for the auto-categorization feature.
+
+It defines the `AutoCategorizeFrame` class, which creates and manages the user interface
+for selecting Excel files and running the auto-categorization process on transactions.
+"""
 #!/usr/bin/env python3
 
 import os
@@ -9,7 +15,21 @@ from .logger import logger
 from .auto_categorizer import AutoCategorizer
 
 class AutoCategorizeFrame(ttk.Frame):
+    """
+    Manages the user interface for the auto-categorization feature.
+
+    This class creates a frame with widgets for selecting an Excel file and
+    triggering the auto-categorization process. It handles file validation,
+    user feedback, and integration with the AutoCategorizer backend.
+    """
     def __init__(self, parent, controller):
+        """
+        Initialize the AutoCategorizeFrame.
+
+        Args:
+            parent: The parent widget
+            controller: The main application controller
+        """
         super().__init__(parent)
         self.controller = controller
         self.excel_var = tk.StringVar()
@@ -23,6 +43,12 @@ class AutoCategorizeFrame(ttk.Frame):
         self.update_file_status()
 
     def create_widgets(self):
+        """
+        Create and layout all the GUI widgets for the auto-categorization interface.
+
+        This method sets up the main frame, title, instructions, file selection
+        controls, status indicators, and action buttons.
+        """
         style = ttk.Style()
         style.configure("Header.TLabel", font=('Arial', 18, 'bold'))
 
@@ -62,29 +88,47 @@ class AutoCategorizeFrame(ttk.Frame):
         self.excel_var.trace('w', lambda *args: self.update_file_status())
     
     def load_saved_path(self):
+        """
+        Load the previously saved Excel file path from the configuration file.
+
+        This method reads the configuration file and restores the last used
+        Excel file path if it exists and is still valid.
+        """
         try:
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     saved_path = config.get('last_excel_path', '')
                     if saved_path and os.path.exists(saved_path):
                         self.excel_var.set(saved_path)
-        except Exception as e:
-            logger.error(f"Error loading saved path: {e}")
+        except (FileNotFoundError, json.JSONDecodeError, PermissionError) as e:
+            logger.error("Error loading saved path: %s", e)
 
     def save_path(self):
+        """
+        Save the current Excel file path to the configuration file.
+
+        This method preserves the user's file selection for future sessions
+        by writing the current path to the configuration file.
+        """
         try:
             config = {}
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)
             config['last_excel_path'] = self.excel_var.get()
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving path: {e}")
+        except (FileNotFoundError, json.JSONDecodeError, PermissionError, OSError) as e:
+            logger.error("Error saving path: %s", e)
     
     def update_file_status(self):
+        """
+        Update the file status indicator based on the current Excel file path.
+
+        This method validates the selected file path and updates the status
+        label to show whether the file exists and is a valid Excel file.
+        """
         excel_path = self.excel_var.get()
         if excel_path and os.path.exists(excel_path) and excel_path.lower().endswith('.xlsx'):
             self.excel_status.config(text="✓ Excel file found", foreground="green")
@@ -94,6 +138,12 @@ class AutoCategorizeFrame(ttk.Frame):
             self.excel_status.config(text="")
     
     def browse_excel(self):
+        """
+        Open a file dialog to select an Excel file.
+
+        This method opens a file browser dialog that filters for Excel files
+        and updates the file path variable when a file is selected.
+        """
         file_path = tk.filedialog.askopenfilename(
             title="Select Excel File",
             filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")]
@@ -103,6 +153,13 @@ class AutoCategorizeFrame(ttk.Frame):
             self.update_file_status()
     
     def auto_categorize(self):
+        """
+        Execute the auto-categorization process on the selected Excel file.
+
+        This method validates the file selection, creates an AutoCategorizer
+        instance, runs the categorization process, and displays the results
+        to the user with appropriate success or error messages.
+        """
         excel_path = self.excel_var.get()
         if not excel_path or not os.path.exists(excel_path):
             messagebox.showerror("Error", "Please select a valid Excel file.")
@@ -119,7 +176,7 @@ class AutoCategorizeFrame(ttk.Frame):
                 self.controller.show_frame("MainMenuFrame")
             else:
                 messagebox.showerror("Error", f"Auto-categorization failed: {message}")
-        except Exception as e:
-            logger.error(f"Failed to run auto-categorization: {e}")
+        except (ValueError, FileNotFoundError, PermissionError, OSError) as e:
+            logger.error("Failed to run auto-categorization: %s", e)
             logger.debug(traceback.format_exc())
             messagebox.showerror("Error", f"An unexpected error occurred:\n{str(e)}") 
