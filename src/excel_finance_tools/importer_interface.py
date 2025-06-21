@@ -1,8 +1,15 @@
+"""
+This module defines the abstract interface for transaction importers.
+"""
 from abc import ABC, abstractmethod
 from typing import List
 
 class TransactionImporter(ABC):
-    """Core interface for importing transactions from a bank's CSV file."""
+    """
+    An abstract base class that defines the interface for all bank-specific
+    transaction importers. It ensures that all importers implement a consistent
+    method for importing transactions.
+    """
     
     @abstractmethod
     def get_expected_columns(self) -> List[str]:
@@ -32,4 +39,15 @@ class TransactionImporter(ABC):
     @abstractmethod
     def clean_description(self, description: str) -> str:
         """Clean and format transaction description to be more human readable."""
+        pass
+
+    @abstractmethod
+    def import_transactions(self, csv_file: str, excel_file: str):
+        """
+        Import transactions from a CSV file and save them to an Excel file.
+
+        Args:
+            csv_file (str): The path to the CSV file containing transaction data.
+            excel_file (str): The path to the Excel file where transactions will be saved.
+        """
         pass 

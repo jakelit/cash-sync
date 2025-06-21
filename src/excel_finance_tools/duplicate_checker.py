@@ -1,8 +1,15 @@
+"""
+This module provides the DuplicateChecker class to identify and filter
+duplicate transactions.
+"""
 import pandas as pd
 from typing import List, Dict, Any
 
 class DuplicateChecker:
-    """Handles checking for duplicate transactions."""
+    """
+    A utility class to check for and filter duplicate transactions between
+    a new set of data and an existing dataset.
+    """
     
     @staticmethod
     def check_for_duplicates(existing_df: pd.DataFrame, new_transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

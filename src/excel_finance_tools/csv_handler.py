@@ -1,9 +1,12 @@
-import pandas as pd
+"""
+This module provides the CSVHandler class for reading and validating CSV files.
+"""
 import os
+import pandas as pd
 from typing import List
 
 class CSVHandler:
-    """Handles all CSV file operations including reading and validation."""
+    """A utility class to handle reading and validating CSV files."""
     
     def __init__(self, csv_file: str):
         self.csv_file = csv_file

@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+"""
+This module provides the main graphical user interface for the Excel Finance Tools.
+
+It defines the main application window, `ExcelFinanceToolsApp`, which serves as
+the controller for managing different UI frames, and the `MainMenuFrame`, which
+is the initial screen that allows users to navigate to the application's
+different features like importing and auto-categorizing transactions.
+"""
+
 import tkinter as tk
 from tkinter import ttk
 from .importer_gui import ImporterGUIFrame
@@ -77,6 +86,13 @@ class ExcelFinanceToolsApp(tk.Tk):
         self.mainloop()
 
 class MainMenuFrame(ttk.Frame):
+    """
+    The main menu frame, providing a central navigation hub for the application.
+
+    This frame displays the primary actions a user can take, such as importing
+    transactions or running the auto-categorizer, and it directs the user to
+    the appropriate interface for each tool.
+    """
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller

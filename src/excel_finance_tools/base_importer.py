@@ -1,9 +1,16 @@
+"""
+Defines the base class and interface for all transaction importers.
+
+This module provides the `BaseImporter` class, an abstract base class that
+establishes a common interface for all bank-specific importers. It handles
+the shared logic for reading CSVs, finding and validating columns, checking
+for duplicates, and writing new transactions to Excel.
+"""
 import os
 import pandas as pd
 from datetime import datetime, timedelta
 import re
-from abc import abstractmethod
-import re
+from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Tuple
 import traceback
 from .csv_handler import CSVHandler
@@ -12,10 +19,19 @@ from .importer_interface import TransactionImporter
 from .logger import logger
 
 
-class BaseImporter(TransactionImporter):
-    """Base class for importing transactions from bank CSV files to Excel."""
+class BaseImporter(ABC):
+    """
+    Abstract base class for all bank-specific transaction importers.
+
+    This class provides the core framework for importing transactions, including
+    CSV reading, duplicate checking, and writing to an Excel file. Subclasses
+
+    must implement the abstract methods to handle institution-specific details
+    like column mappings and transaction parsing logic.
+    """
     
     def __init__(self):
+        """Initializes the BaseImporter."""
         self.csv_file = None
         self.excel_file = None
         

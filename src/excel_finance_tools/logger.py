@@ -1,3 +1,7 @@
+"""
+This module configures and provides a centralized logging instance for the
+entire application.
+"""
 import logging
 import sys
 from datetime import datetime

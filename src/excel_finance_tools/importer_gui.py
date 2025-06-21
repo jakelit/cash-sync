@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+This module provides the graphical user interface for importing transaction files.
+
+It defines the `ImporterGUIFrame`, which contains all the widgets and logic
+for the import user interface, and the main `ImporterGUI` class which acts
+as a controller.
+"""
+
 import os
 from pathlib import Path
 import tkinter as tk
@@ -10,6 +18,14 @@ from .ally_importer import AllyImporter
 from .logger import logger
 
 class ImporterGUIFrame(ttk.Frame):
+    """
+    Manages the user interface frame for the transaction importer.
+
+    This class creates and lays out all the GUI widgets, including file
+    selectors, the bank selection dropdown, and the import button. It also
+    handles user interactions, such as browsing for files and initiating the
+    import process.
+    """
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller

@@ -1,7 +1,22 @@
+"""
+Defines the CapitalOneImporter class for processing Capital One transaction data.
+
+This module provides the implementation of the CapitalOneImporter, which is
+specifically designed to handle the CSV format exported from Capital One's
+online portal.
+"""
 from .base_importer import BaseImporter
 from .logger import logger
 
 class CapitalOneImporter(BaseImporter):
+    """
+    Handles the import of transaction data from Capital One CSV files.
+
+    This class sets up the specific column mappings and default values
+    required to correctly parse and import transaction files from Capital One,
+    and it implements the logic for parsing transaction amounts, where debits
+    are positive and credits are negative.
+    """
     def __init__(self):
         super().__init__()
         

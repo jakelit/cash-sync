@@ -1,3 +1,7 @@
+"""
+This module provides the ExcelHandler class, a comprehensive utility for
+interacting with the finance Excel workbook.
+"""
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, range_boundaries
@@ -11,7 +15,11 @@ from .logger import logger
 
 class ExcelHandler:
     """
-    Excel handler that properly works with Excel Tables.
+    Manages all interactions with the Excel workbook.
+
+    This class is responsible for loading the workbook, reading transaction data
+    from the 'Transactions' table, reading rules from the 'AutoCat' sheet,
+    appending new transactions, and saving changes back to the file.
     """
     
     def __init__(self, excel_file: str):
