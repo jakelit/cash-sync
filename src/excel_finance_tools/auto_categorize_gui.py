@@ -3,8 +3,8 @@
 import os
 import json
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from pathlib import Path
+from tkinter import ttk, messagebox
+import traceback
 from .logger import logger
 from .auto_categorizer import AutoCategorizer
 

@@ -1,7 +1,7 @@
 from .excel_handler import ExcelHandler
 from .logger import logger
 import pandas as pd
-from typing import Dict, List, Any, Optional
+from typing import Dict, List
 import traceback
 import re
 
@@ -22,7 +22,7 @@ class AutoCategorizer:
         self.rules = []
         self._regex_cache = {}
 
-    def run_auto_categorization(self) -> (bool, str):
+    def run_auto_categorization(self) -> tuple[bool, str]:
         """
         Main method to run the auto-categorization process.
         

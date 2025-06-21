@@ -2,12 +2,9 @@
 
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import json
-import traceback
-from typing import Dict, Any, Optional, Tuple
 from .capital_one_importer import CapitalOneImporter
 from .ally_importer import AllyImporter
 from .logger import logger

@@ -1,7 +1,4 @@
 from .base_importer import BaseImporter
-import pandas as pd
-from datetime import datetime
-import re
 from .logger import logger
 
 class AllyImporter(BaseImporter):
