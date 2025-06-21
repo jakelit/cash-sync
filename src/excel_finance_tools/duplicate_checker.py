@@ -20,11 +20,13 @@ class DuplicateChecker:
         # Convert new transactions to DataFrame for easier comparison
         new_df = pd.DataFrame(new_transactions)
         
-        # Create a comparison key using date, amount, and first 20 chars of description
+        # Create a comparison key using date, amount, and first 20 chars of Full Description
+        # Note: Using Full Description instead of Description because Description is often changed by users. 
+        # The Full Description is the original description from the bank and provides more reliable duplicate detection.
         def create_comparison_key(row: Dict[str, Any]) -> str:
             date_str = str(row.get('Date', ''))
             amount_str = str(row.get('Amount', ''))
-            desc_str = str(row.get('Description', ''))[:20].strip()
+            desc_str = str(row.get('Full Description', ''))[:20].strip()
             return f"{date_str}|{amount_str}|{desc_str}"
         
         # Create comparison keys for existing transactions

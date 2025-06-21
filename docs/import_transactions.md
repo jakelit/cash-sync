@@ -64,6 +64,50 @@ The importer will map the source data to the following standard columns in the "
 5.  **Data Appending**: Any transaction that is not identified as a duplicate is appended as a new row to the "Transactions" table in the Excel file.
 6.  **Save Workbook**: After all new transactions have been appended, the Excel workbook is saved.
 
+## Duplicate Detection System
+
+The duplicate checker prevents the same transaction from being imported multiple times, ensuring data integrity.
+
+### How It Works
+
+The system creates a unique comparison key for each transaction using three fields:
+- **Date**: Transaction date
+- **Amount**: Transaction amount (including sign)
+- **Full Description**: First 20 characters of the original bank description
+
+**Comparison Key Format:**
+```
+{date}|{amount}|{first_20_chars_of_full_description}
+```
+
+### Why "Full Description"?
+
+The system uses the original bank description (not user-editable "Description") because:
+- Bank descriptions never change, providing consistent duplicate detection
+- Users can modify transaction descriptions for categorization without affecting duplicate detection
+
+### Detection Process
+
+1. Load existing transactions from Excel file
+2. Generate comparison keys for all existing transactions
+3. For each new transaction:
+   - Generate its comparison key
+   - If key exists → Skip as duplicate
+   - If key doesn't exist → Add to import list
+4. Report how many duplicates were filtered out
+
+### Example Scenarios
+
+**Duplicate Detected:**
+- Existing: `2024-01-15 | -45.67 | STARBUCKS COFFEE #1234`
+- New: `2024-01-15 | -45.67 | STARBUCKS COFFEE #1234`
+- **Result**: Filtered out
+
+**Not a Duplicate:**
+- Existing: `2024-01-15 | -45.67 | STARBUCKS COFFEE #1234`
+- New: `2024-01-15 | -45.67 | STARBUCKS COFFEE #5678`
+- **Result**: Imported (different store location)
+
 ## Error Handling
 - **Invalid File Format**: If a selected CSV file does not match the expected format for the chosen institution, the import will fail, and an error message will be displayed to the user.
 - **File Not Found**: Errors are shown if the source or destination files cannot be read or written to.
