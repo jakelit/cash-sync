@@ -34,8 +34,9 @@ from .importer_interface import TransactionImporter
 from .excel_handler import ExcelHandler
 from .csv_handler import CSVHandler
 from .duplicate_checker import DuplicateChecker
-from .importer_gui import ImporterGUI
+from .main_gui import ExcelFinanceToolsApp
 from .logger import logger
+from .auto_categorizer import AutoCategorizer
 
 # Available banks
 BANKS = {
@@ -45,40 +46,62 @@ BANKS = {
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Import bank CSV transactions to Excel',
+        description='Excel Finance Tools.',
         epilog='''
 Examples:
-  python script.py capitalone transactions.csv transactions.xlsx
-  python script.py ally transactions.csv transactions.xlsx
-  python script.py  # Opens GUI dialog
+  python run.py import capitalone transactions.csv my_finances.xlsx
+  python run.py autocat my_finances.xlsx
+  python run.py  # Opens the main GUI
         ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument('bank', nargs='?', choices=list(BANKS.keys()), 
-                       help='Bank to import from (capitalone or ally)')
-    parser.add_argument('csv_file', nargs='?', help='Path to bank CSV file')
-    parser.add_argument('excel_file', nargs='?', help='Path to Excel file')
-    parser.add_argument('--version', action='version', version='Bank to Excel Importer 1.0')
+    
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    
+    # --- Import Command ---
+    import_parser = subparsers.add_parser('import', help='Import transactions from a CSV file.')
+    import_parser.add_argument('bank', choices=list(BANKS.keys()), help='Bank name (e.g., capitalone, ally).')
+    import_parser.add_argument('csv_file', help='Path to the bank CSV file.')
+    import_parser.add_argument('excel_file', help='Path to your main Excel file.')
+
+    # --- Auto-Categorize Command ---
+    autocat_parser = subparsers.add_parser('autocat', help='Automatically categorize transactions in an Excel file.')
+    autocat_parser.add_argument('excel_file', help='Path to the Excel file to categorize.')
+
+    parser.add_argument('--version', action='version', version='Excel Finance Tools 1.1')
     
     args = parser.parse_args()
     
-    # If all arguments provided via command line, process directly
-    if args.bank and args.csv_file and args.excel_file:
-        logger.info("Bank to Excel Importer")
+    if args.command == 'import':
+        logger.info("Running Transaction Importer...")
         logger.info("=" * 40)
         importer = BANKS[args.bank]()
         success, message = importer.import_transactions(args.csv_file, args.excel_file)
-        logger.info("\n" + "=" * 40)
+        logger.info("=" * 40)
         if success:
-            logger.info("Import completed successfully!")
+            logger.info(f"Import completed: {message}")
         else:
-            logger.error("Import failed!")
+            logger.error(f"Import failed: {message}")
             sys.exit(1)
-    else:
-        # Show GUI dialog
+            
+    elif args.command == 'autocat':
+        logger.info("Running Auto-Categorizer...")
+        logger.info("=" * 40)
+        categorizer = AutoCategorizer(args.excel_file)
+        success, message = categorizer.run_auto_categorization()
+        logger.info("=" * 40)
+        if success:
+            logger.info(f"Auto-categorization completed: {message}")
+        else:
+            logger.error(f"Auto-categorization failed: {message}")
+            sys.exit(1)
+            
+    else: # This handles no command being provided
+        # Show main GUI dialog
+        logger.info("No command provided, starting GUI...")
         try:
-            gui = ImporterGUI()
-            gui.run()
+            app = ExcelFinanceToolsApp()
+            app.run()
         except Exception as e:
             logger.error(f"Error starting GUI: {e}")
             logger.error("Please ensure tkinter is installed: pip install tkinter")
@@ -94,5 +117,7 @@ __all__ = [
     'TransactionImporter',
     'ExcelHandler',
     'CSVHandler',
-    'DuplicateChecker'
+    'DuplicateChecker',
+    'ExcelFinanceToolsApp',
+    'AutoCategorizer'
 ]

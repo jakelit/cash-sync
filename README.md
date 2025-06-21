@@ -4,12 +4,10 @@ A Python package for importing and managing bank transactions in Excel spreadshe
 
 ## Features
 
-- Import transactions from multiple bank CSV files
-- Support for Ally and Capital One banks
-- Command-line and GUI interfaces
-- Automatic duplicate detection
-- Excel spreadsheet management
-- Transaction categorization
+- **[Transaction Importing](./docs/import_transactions.md)**: Import financial data from CSV files from various banks using either a GUI or CLI. Includes automatic duplicate detection to ensure data integrity.
+- **[Auto-Categorization](./docs/auto_categorize.md)**: Automatically categorize transactions based on a powerful and flexible set of user-defined rules in a dedicated "AutoCat" worksheet.
+- **Modern GUI**: A clean and modern user interface provides a launchpad for all available tools.
+- **Excel Integration**: All data is managed within a standard Excel workbook with structured tables.
 
 ## Installation
 
@@ -33,29 +31,28 @@ python run.py
 
 ## Usage
 
-### Command Line Interface
+The application can be started in GUI mode or run directly from the command line for specific tasks.
 
 ```bash
-# Using GUI
-python -m excel_finance_tools
+# To launch the main application GUI
+python run.py
 
-# Using command line
-python -m excel_finance_tools [bank] [csv_file] [excel_file]
+# --- Command-Line Usage ---
 
-# Examples:
-python -m excel_finance_tools capitalone transactions.csv transactions.xlsx
-python -m excel_finance_tools ally transactions.csv transactions.xlsx
+# To run the transaction importer
+python run.py import <bank> <csv_file> <excel_file>
+
+# To run the auto-categorizer
+python run.py autocat <excel_file>
+
+# --- Examples ---
+# Import Capital One transactions
+python run.py import capitalone transactions.csv my_finances.xlsx
+
+# Auto-categorize transactions in an Excel file
+python run.py autocat my_finances.xlsx
 ```
-
-### Python API
-
-```python
-from excel_finance_tools import AllyImporter, CapitalOneImporter
-
-# Import Ally transactions
-importer = AllyImporter()
-success, message = importer.import_transactions("transactions.csv", "transactions.xlsx")
-```
+For more details on specific features, see the documentation in the `docs/` directory.
 
 ## Development
 
@@ -77,7 +74,6 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```bash
 pip install -r requirements-dev.txt
 ```
-
 ### Running Tests and Checks
 
 Run all tests and code quality checks:

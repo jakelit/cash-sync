@@ -22,6 +22,7 @@ class ExcelHandler:
         self.existing_df = None
         self.existing_columns = None
         self.column_mapping = {}  # Maps transaction columns to Excel column indices
+        self.header_row = None
     
     def load_workbook(self):
         """Load the Excel workbook and locate the Transactions table."""
@@ -94,8 +95,12 @@ formatting management in the code.
             sheet_name=self.ws.title,
             usecols=f"{get_column_letter(min_col)}:{get_column_letter(max_col)}",
             skiprows=min_row - 1,  # Skip to header row
-            nrows=max_row - min_row  # Read only table rows
+            nrows=max_row - min_row,  # Read only table rows
+            index_col=None  # Ensure we get a default 0-based index
         )
+        
+        # Store the header row number for later calculations
+        self.header_row = min_row
         
         self.existing_columns = list(self.existing_df.columns)
         logger.info(f"Loaded {len(self.existing_df)} existing transactions")
@@ -115,6 +120,49 @@ formatting management in the code.
         
         logger.debug(f"Built column mapping: {dict((k, v) for k, v in self.column_mapping.items() if k.islower())}")
     
+    def get_autocat_rules(self) -> Optional[pd.DataFrame]:
+        """Load the AutoCat rules from the 'AutoCat' worksheet."""
+        logger.info("Loading AutoCat rules...")
+        try:
+            rules_df = pd.read_excel(self.excel_file, sheet_name='AutoCat')
+            logger.info(f"Loaded {len(rules_df)} rules from 'AutoCat' sheet.")
+            return rules_df
+        except Exception as e:
+            logger.warning(f"Could not load 'AutoCat' worksheet: {e}")
+            logger.debug(f"Could not find 'AutoCat' sheet. This is not an error if you don't use this feature.")
+            return None
+
+    def update_cell(self, df_index: int, column_name: str, value: Any):
+        """
+        Update a specific cell in the Excel table.
+        
+        Args:
+            df_index (int): The 0-based index of the row in the DataFrame.
+            column_name (str): The name of the column to update.
+            value (Any): The new value to set.
+        """
+        try:
+            if column_name not in self.column_mapping:
+                logger.warning(f"Column '{column_name}' not found in the Excel table. Cannot update cell.")
+                return
+            
+            # Excel is 1-based, header is at self.header_row, data starts below it.
+            # The DataFrame index (df_index) is 0-based relative to the data.
+            excel_row = self.header_row + 1 + df_index
+            excel_col = self.column_mapping[column_name]
+            
+            logger.debug(f"Updating cell at (row={excel_row}, col={excel_col}) to '{value}'")
+            
+            cell = self.ws.cell(row=excel_row, column=excel_col)
+            cell.value = value
+            
+            # Also update the in-memory dataframe to keep it consistent
+            self.existing_df.loc[df_index, column_name] = value
+
+        except Exception as e:
+            logger.error(f"Failed to update cell at index {df_index}, column '{column_name}'")
+            logger.debug(traceback.format_exc())
+
     def update_transactions(self, transactions: List[Dict[str, Any]]) -> int:
         """Add new transactions to the Transactions table."""
         if not transactions:
