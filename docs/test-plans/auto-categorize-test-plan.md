@@ -95,14 +95,14 @@ Input validation, file access permissions, and data sanitization
 ## Test File Organization
 
 ### Multi-File Structure
-Due to the comprehensive nature of the Auto Categorize feature (70 test scenarios across 8 categories), tests are organized into multiple files for better maintainability and parallel execution:
+Due to the comprehensive nature of the Auto Categorize feature (72 test scenarios across 8 categories), tests are organized into multiple files for better maintainability and parallel execution:
 
 ```
 tests/
 ├── test_auto_categorizer_unit.py          # TC001-TC042, TC072 (43 unit tests)
 ├── test_auto_categorizer_integration.py   # TC043-TC057 (15 integration tests)
 ├── test_auto_categorizer_e2e.py           # TC058-TC061 (4 E2E tests)
-├── test_auto_categorizer_performance.py   # TC062-TC065 (4 performance tests)
+├── test_auto_categorizer_performance.py   # TC062-TC067 (6 performance tests)
 ├── test_auto_categorizer_property.py      # TC068-TC069 (2 property tests)
 ├── test_auto_categorizer_security.py      # TC070-TC071 (2 security tests)
 └── test_auto_categorizer_data_integrity.py # TC066-TC067 (2 data integrity tests)
@@ -202,12 +202,14 @@ pytest -m "performance" tests/test_auto_categorizer*.py
 | TC063   | Performance    | `run_auto_categorization()` | Many rules                           | 100 rules                                                        | Completes within 60 seconds                   | Medium   | Performance                |
 | TC064   | Performance    | `run_auto_categorization()` | Complex rules                        | Regex and multiple conditions                                    | Completes within 45 seconds                   | Medium   | Performance                |
 | TC065   | Performance    | `run_auto_categorization()` | Memory usage                         | Large datasets                                                   | Memory usage stays within limits              | Medium   | Performance                |
-| TC066   | Data Integrity | `run_auto_categorization()` | Categorized transactions             | Already categorized transactions                                 | No changes made                               | High     | Data integrity             |
-| TC067   | Data Integrity | `run_auto_categorization()` | Audit trail                          | Changes made                                                     | Log entries created                           | Medium   | Audit functionality        |
-| TC068   | Property       | `parse_rule_columns()`      | Rule parsing consistency             | Hypothesis-generated rule names                                  | Parsing always succeeds or fails consistently | Medium   | Property-based             |
-| TC069   | Property       | `evaluate_rule()`           | Rule evaluation properties           | Random rule/transaction combinations                             | Evaluation is deterministic and consistent    | Medium   | Property-based             |
-| TC070   | Security       | `__init__()`                | File access validation               | Invalid file paths, permissions                                  | Proper exception handling                     | High     | Security                   |
-| TC071   | Security       | `load_rules()`              | Input sanitization                   | Malicious Excel content                                          | Safe handling of malformed data               | High     | Security                   |
+| TC066   | Performance    | `run_auto_categorization()` | Large dataset throughput             | 10,000 transactions with simple rules                            | Throughput > 100 transactions/second          | Medium   | Performance                |
+| TC067   | Performance    | `run_auto_categorization()` | Concurrent rule evaluation           | 10,000 transactions × 100 rules                                  | Evaluation rate > 1000 evaluations/second     | Medium   | Performance                |
+| TC068   | Data Integrity | `run_auto_categorization()` | Categorized transactions             | Already categorized transactions                                 | No changes made                               | High     | Data integrity             |
+| TC069   | Data Integrity | `run_auto_categorization()` | Audit trail                          | Changes made                                                     | Log entries created                           | Medium   | Audit functionality        |
+| TC070   | Property       | `parse_rule_columns()`      | Rule parsing consistency             | Hypothesis-generated rule names                                  | Parsing always succeeds or fails consistently | Medium   | Property-based             |
+| TC071   | Property       | `evaluate_rule()`           | Rule evaluation properties           | Random rule/transaction combinations                             | Evaluation is deterministic and consistent    | Medium   | Property-based             |
+| TC072   | Security       | `__init__()`                | File access validation               | Invalid file paths, permissions                                  | Proper exception handling                     | High     | Security                   |
+| TC073   | Security       | `load_rules()`              | Input sanitization                   | Malicious Excel content                                          | Safe handling of malformed data               | High     | Security                   |
 
 ## Test Data Strategy
 
@@ -393,7 +395,7 @@ pytest -m "not slow" tests/test_auto_categorizer*.py
   - [ ] `tests/test_auto_categorizer_unit.py` (43 unit tests)
   - [ ] `tests/test_auto_categorizer_integration.py` (15 integration tests)
   - [ ] `tests/test_auto_categorizer_e2e.py` (4 E2E tests)
-  - [ ] `tests/test_auto_categorizer_performance.py` (4 performance tests)
+  - [ ] `tests/test_auto_categorizer_performance.py` (6 performance tests)
   - [ ] `tests/test_auto_categorizer_property.py` (2 property tests)
   - [ ] `tests/test_auto_categorizer_security.py` (2 security tests)
   - [ ] `tests/test_auto_categorizer_data_integrity.py` (2 data integrity tests)
