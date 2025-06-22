@@ -10,8 +10,7 @@ import sys
 import os
 import pytest
 import pandas as pd
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
+from unittest.mock import Mock, patch
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -86,7 +85,7 @@ class TestAutoCategorizerDataIntegrity:
     
     @pytest.mark.data_integrity
     def test_categorized_transactions_unchanged(self, mixed_transactions_df, valid_rules_df, mock_excel_handler):
-        """TC068: Test that already categorized transactions are not modified."""
+        """DI001: Test that already categorized transactions are not modified."""
         # Arrange
         mock_excel_handler.existing_df = mixed_transactions_df
         mock_excel_handler.existing_columns = list(mixed_transactions_df.columns)
@@ -133,7 +132,7 @@ class TestAutoCategorizerDataIntegrity:
     
     @pytest.mark.data_integrity
     def test_audit_trail_functionality(self, mixed_transactions_df, valid_rules_df, mock_excel_handler):
-        """TC069: Test that audit trail entries are created for categorization changes.
+        """DI002: Test that audit trail entries are created for categorization changes.
         
         This test validates that the AutoCategorizer properly logs all categorization actions
         for audit and debugging purposes. It ensures:

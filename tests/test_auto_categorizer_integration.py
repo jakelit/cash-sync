@@ -31,11 +31,11 @@ def mock_excel_handler():
 class TestAutoCategorizerIntegration:
     """Test integration with ExcelHandler and transaction data."""
 
-    # ===== BASIC FUNCTIONALITY TESTS (TC043-TC048) =====
+    # ===== BASIC FUNCTIONALITY TESTS =====
 
     @pytest.mark.integration
     def test_single_rule_match(self, mock_excel_handler):
-        """TC043: Test single rule match - Category assigned, auto-fill applied."""
+        """IT001: Test single rule match - Category assigned, auto-fill applied."""
         categorizer = AutoCategorizer("test.xlsx")
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
             {'Category': 'Groceries', 'Description Contains': 'WALMART', 'Tags': 'shopping'}
@@ -64,7 +64,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_multiple_rules_first_match(self, mock_excel_handler):
-        """TC044: Test multiple rules, first match - First rule applied, others ignored."""
+        """IT002: Test multiple rules, first match - First rule applied, others ignored."""
         categorizer = AutoCategorizer("test.xlsx")
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
             {'Category': 'Groceries', 'Description Contains': 'WALMART', 'Tags': 'shopping'},
@@ -95,7 +95,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_complex_rule_combination(self, mock_excel_handler):
-        """TC048: Test complex rule combination - All conditions must match."""
+        """IT006: Test complex rule combination - All conditions must match."""
         categorizer = AutoCategorizer("test.xlsx")
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
             {
@@ -126,11 +126,11 @@ class TestAutoCategorizerIntegration:
             applied_tag = tag_updates[0][0][2]
             assert applied_tag == 'food', f"Expected 'food' but got '{applied_tag}'"
 
-    # ===== EDGE CASES TESTS (TC045-TC047) =====
+    # ===== EDGE CASES TESTS =====
 
     @pytest.mark.integration
     def test_no_rules_match(self, mock_excel_handler):
-        """TC045: Test no rules match - No changes made."""
+        """IT003: Test no rules match - No changes made."""
         categorizer = AutoCategorizer("test.xlsx")
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
             {'Category': 'Electronics', 'Description Contains': 'BEST BUY', 'Tags': 'tech'}
@@ -144,7 +144,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_empty_category_rule(self, mock_excel_handler):
-        """TC046: Test empty category rule - Only auto-fill applied."""
+        """IT004: Test empty category rule - Only auto-fill applied."""
         categorizer = AutoCategorizer("test.xlsx")
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
             {'Category': '', 'Description Contains': 'WALMART', 'Tags': 'shopping'}
@@ -161,7 +161,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_all_transactions_categorized(self, mock_excel_handler):
-        """TC047: Test all transactions categorized - No changes made."""
+        """IT005: Test all transactions categorized - No changes made."""
         categorizer = AutoCategorizer("test.xlsx")
         # All transactions already categorized
         mock_excel_handler.existing_df = pd.DataFrame({
@@ -181,11 +181,11 @@ class TestAutoCategorizerIntegration:
             assert "no uncategorized" in message.lower()
             mock_update.assert_not_called()
 
-    # ===== WARNING TESTS (TC049, TC052) =====
+    # ===== WARNING TESTS =====
 
     @pytest.mark.integration
     def test_invalid_auto_fill_column(self, mock_excel_handler):
-        """TC049: Test invalid auto-fill column - Auto-fill ignored, logged."""
+        """IT007: Test invalid auto-fill column - Auto-fill ignored, logged."""
         categorizer = AutoCategorizer("test.xlsx")
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
             {
@@ -208,7 +208,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_invalid_rule_syntax(self, mock_excel_handler):
-        """TC052: Test invalid rule syntax - Rule ignored, processing continues."""
+        """IT010: Test invalid rule syntax - Rule ignored, processing continues."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock rules with invalid syntax that should be ignored
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
@@ -240,7 +240,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_empty_autocat_worksheet(self, mock_excel_handler):
-        """TC053: Test empty AutoCat worksheet - Returns True with warning message."""
+        """IT011: Test empty AutoCat worksheet - Returns True with warning message."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock empty AutoCat worksheet (empty DataFrame)
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame()
@@ -262,11 +262,11 @@ class TestAutoCategorizerIntegration:
             # Should not make any updates since no rules exist
             mock_update.assert_not_called()
 
-    # ===== EXCEPTION HANDLING TESTS (TC050-TC051, TC054-TC057) =====
+    # ===== EXCEPTION HANDLING TESTS =====
 
     @pytest.mark.integration
     def test_corrupted_excel_file(self, mock_excel_handler):
-        """TC050: Test corrupted Excel file - Returns False with appropriate exception."""
+        """IT008: Test corrupted Excel file - Returns False with appropriate exception."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock load_workbook to raise OSError (corrupted file)
         mock_excel_handler.load_workbook.side_effect = OSError("Invalid Excel file format")
@@ -286,7 +286,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_permission_denied(self, mock_excel_handler):
-        """TC051: Test permission denied - Returns False with PermissionError."""
+        """IT009: Test permission denied - Returns False with PermissionError."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock load_workbook to raise PermissionError
         mock_excel_handler.load_workbook.side_effect = PermissionError("Access denied")
@@ -306,7 +306,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_missing_category_column(self, mock_excel_handler):
-        """TC054: Test missing Category column - Returns False with ValueError message."""
+        """IT012: Test missing Category column - Returns False with ValueError message."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock existing_df without Category column
         mock_excel_handler.existing_df = pd.DataFrame({
@@ -332,7 +332,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_file_not_found_error(self, mock_excel_handler):
-        """TC055: Test FileNotFoundError - Returns False with FileNotFoundError message."""
+        """IT013: Test FileNotFoundError - Returns False with FileNotFoundError message."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock load_workbook to raise FileNotFoundError
         mock_excel_handler.load_workbook.side_effect = FileNotFoundError("File not found")
@@ -352,7 +352,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_permission_error_readonly_file(self, mock_excel_handler):
-        """TC056: Test PermissionError for read-only file - Returns False with PermissionError message."""
+        """IT014: Test PermissionError for read-only file - Returns False with PermissionError message."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock rules so the categorization process completes and reaches the save() call
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame([
@@ -376,7 +376,7 @@ class TestAutoCategorizerIntegration:
 
     @pytest.mark.integration
     def test_os_error_general(self, mock_excel_handler):
-        """TC057: Test OSError - Returns False with OSError message."""
+        """IT015: Test OSError - Returns False with OSError message."""
         categorizer = AutoCategorizer("test.xlsx")
         # Mock load_workbook to raise OSError
         mock_excel_handler.load_workbook.side_effect = OSError("Disk full")

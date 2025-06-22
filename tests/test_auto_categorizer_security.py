@@ -2,8 +2,10 @@
 Security tests for AutoCategorizer class.
 
 Covers:
-- TC072: File access validation (invalid paths, permissions)
-- TC073: Input sanitization (malicious Excel content)
+- SEC001: File access validation (invalid paths, permissions)
+- SEC002: Input sanitization (malicious Excel content)
+- SEC003: Permission validation (inaccessible files)
+- SEC004: Missing column handling (missing Category column)
 """
 
 import sys
@@ -17,24 +19,24 @@ from excel_finance_tools.auto_categorizer import AutoCategorizer
 
 @pytest.mark.security
 class TestAutoCategorizerSecurity:
-    """Security tests for AutoCategorizer (TC072, TC073)."""
+    """Security tests for AutoCategorizer (SEC001-SEC004)."""
 
     def test_init_invalid_file_path(self):
-        """TC072: __init__() should raise FileNotFoundError for invalid file path."""
+        """SEC001: __init__() should raise FileNotFoundError for invalid file path."""
         with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_handler:
             mock_handler.side_effect = FileNotFoundError("File not found")
             with pytest.raises(FileNotFoundError, match="File not found"):
                 AutoCategorizer("/invalid/path/to/file.xlsx")
 
     def test_init_permission_error(self):
-        """TC072: __init__() should raise PermissionError for inaccessible file."""
+        """SEC002: __init__() should raise PermissionError for inaccessible file."""
         with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_handler:
             mock_handler.side_effect = PermissionError("Permission denied")
             with pytest.raises(PermissionError, match="Permission denied"):
                 AutoCategorizer("/protected/file.xlsx")
 
     def test_load_rules_malformed_excel(self):
-        """TC073: load_rules() should handle malformed Excel content safely."""
+        """SEC003: load_rules() should handle malformed Excel content safely."""
         # Patch ExcelHandler to return a DataFrame with malicious/invalid columns
         with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_handler_class:
             mock_handler = Mock()
@@ -52,7 +54,7 @@ class TestAutoCategorizerSecurity:
             assert categorizer.rules == [], "Malformed rules should not be loaded."
 
     def test_load_rules_missing_category_column(self, caplog):
-        """TC073: load_rules() should log error and not crash if 'Category' column is missing."""
+        """SEC004: load_rules() should log error and not crash if 'Category' column is missing."""
         with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_handler_class:
             mock_handler = Mock()
             # DataFrame missing 'Category' column

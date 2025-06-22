@@ -6,8 +6,6 @@ covering complete workflows from Excel file loading to transaction categorizatio
 """
 
 import pytest
-from unittest.mock import Mock, patch
-import pandas as pd
 from openpyxl import Workbook
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import tempfile
@@ -192,7 +190,7 @@ class TestAutoCategorizerE2E:
 
     @pytest.mark.e2e
     def test_complete_workflow_full_categorization_process(self, sample_excel_file_with_rules_and_transactions):
-        """TC058: Test complete workflow - Full categorization process."""
+        """E2E001: Test complete workflow - Full categorization process."""
         # Arrange
         categorizer = AutoCategorizer(sample_excel_file_with_rules_and_transactions)
         
@@ -212,7 +210,7 @@ class TestAutoCategorizerE2E:
 
     @pytest.mark.e2e
     def test_workflow_with_errors_process_with_invalid_rules(self, sample_excel_file_with_invalid_rules):
-        """TC059: Test workflow with errors - Process with invalid rules."""
+        """E2E002: Test workflow with errors - Process with invalid rules."""
         # Arrange
         categorizer = AutoCategorizer(sample_excel_file_with_invalid_rules)
         
@@ -231,7 +229,7 @@ class TestAutoCategorizerE2E:
 
     @pytest.mark.e2e
     def test_workflow_with_no_matches_process_with_no_matching_rules(self, sample_excel_file_with_no_matching_rules):
-        """TC060: Test workflow with no matches - Process with no matching rules."""
+        """E2E003: Test workflow with no matches - Process with no matching rules."""
         # Arrange
         categorizer = AutoCategorizer(sample_excel_file_with_no_matching_rules)
         
@@ -250,7 +248,7 @@ class TestAutoCategorizerE2E:
 
     @pytest.mark.e2e
     def test_workflow_with_complex_rules_process_with_multiple_rule_types(self, sample_excel_file_with_complex_rules):
-        """TC061: Test workflow with complex rules - Process with multiple rule types."""
+        """E2E004: Test workflow with complex rules - Process with multiple rule types."""
         # Arrange
         categorizer = AutoCategorizer(sample_excel_file_with_complex_rules)
         

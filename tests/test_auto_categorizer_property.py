@@ -99,7 +99,7 @@ class TestAutoCategorizerProperty:
     @given(rule_column_name=rule_column_names())
     @settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_parse_rule_columns_consistency(self, rule_column_name):
-        """TC070: Test that rule parsing is consistent for hypothesis-generated rule names.
+        """PROP001: Test that rule parsing is consistent for hypothesis-generated rule names.
         
         This property test validates that the rule parsing logic behaves consistently
         across a wide variety of rule column names. It ensures that:
@@ -145,7 +145,7 @@ class TestAutoCategorizerProperty:
     )
     @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_rule_evaluation_properties(self, condition, transaction_data):
-        """TC071: Test that rule evaluation is deterministic and consistent.
+        """PROP002: Test that rule evaluation is deterministic and consistent.
         
         This property test validates that rule evaluation behaves consistently
         across random rule/transaction combinations. It ensures that:
@@ -208,7 +208,7 @@ class TestAutoCategorizerProperty:
     )
     @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_multiple_conditions_consistency(self, conditions, transaction_data):
-        """Test that multiple conditions in a rule are evaluated consistently.
+        """PROP003: Test that multiple conditions in a rule are evaluated consistently.
         
         This property test validates that when multiple conditions are combined
         in a single rule, the evaluation remains consistent and follows AND logic.
@@ -242,7 +242,7 @@ class TestAutoCategorizerProperty:
     )
     @settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])
     def test_rule_parsing_edge_cases(self, field_name, comparison_type, test_value):
-        """Test rule parsing with edge cases and boundary conditions.
+        """PROP004: Test rule parsing with edge cases and boundary conditions.
         
         This property test validates that rule parsing handles edge cases correctly,
         including empty values, special characters, and boundary conditions.

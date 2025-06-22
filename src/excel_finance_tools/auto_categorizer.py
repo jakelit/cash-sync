@@ -118,6 +118,7 @@ class AutoCategorizer:
         """Load and parse categorization rules from the AutoCat sheet."""
         rules_df = self.excel_handler.get_autocat_rules()
         if rules_df is None or rules_df.empty:
+            logger.warning("AutoCat worksheet not found or empty")
             self.rules = []
             return
 

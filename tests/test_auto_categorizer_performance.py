@@ -115,7 +115,7 @@ class TestAutoCategorizerPerformance:
     
     @pytest.mark.performance
     def test_large_dataset_performance(self, large_transactions_df, mock_excel_handler):
-        """TC062: Test performance with 10,000 transactions."""
+        """PERF001: Test performance with 10,000 transactions."""
         # Arrange
         mock_excel_handler.existing_df = large_transactions_df
         mock_excel_handler.existing_columns = list(large_transactions_df.columns)
@@ -145,7 +145,7 @@ class TestAutoCategorizerPerformance:
     
     @pytest.mark.performance
     def test_many_rules_performance(self, large_transactions_df, many_rules_df, mock_excel_handler):
-        """TC063: Test performance with 100 rules."""
+        """PERF002: Test performance with 100 rules."""
         # Arrange
         mock_excel_handler.existing_df = large_transactions_df
         mock_excel_handler.existing_columns = list(large_transactions_df.columns)
@@ -166,7 +166,7 @@ class TestAutoCategorizerPerformance:
     
     @pytest.mark.performance
     def test_complex_rules_performance(self, large_transactions_df, complex_rules_df, mock_excel_handler):
-        """TC064: Test performance with complex regex and multiple conditions."""
+        """PERF003: Test performance with complex rules (Regex and multiple conditions)."""
         # Arrange
         mock_excel_handler.existing_df = large_transactions_df
         mock_excel_handler.existing_columns = list(large_transactions_df.columns)
@@ -187,7 +187,7 @@ class TestAutoCategorizerPerformance:
     
     @pytest.mark.performance
     def test_memory_usage_performance(self, large_transactions_df, many_rules_df, mock_excel_handler):
-        """TC065: Test memory usage stays within acceptable limits."""
+        """PERF004: Test memory usage stays within acceptable limits."""
         # Arrange
         mock_excel_handler.existing_df = large_transactions_df
         mock_excel_handler.existing_columns = list(large_transactions_df.columns)
@@ -206,7 +206,7 @@ class TestAutoCategorizerPerformance:
     
     @pytest.mark.performance
     def test_large_dataset_throughput(self, large_transactions_df, mock_excel_handler):
-        """Test throughput with large dataset."""
+        """PERF005: Test throughput with large dataset."""
         # Arrange
         mock_excel_handler.existing_df = large_transactions_df
         mock_excel_handler.existing_columns = list(large_transactions_df.columns)
@@ -229,7 +229,7 @@ class TestAutoCategorizerPerformance:
     
     @pytest.mark.performance
     def test_concurrent_rule_evaluation(self, large_transactions_df, many_rules_df, mock_excel_handler):
-        """Test performance with many rules against large dataset."""
+        """PERF006: Test performance with many rules against large dataset."""
         # Arrange
         mock_excel_handler.existing_df = large_transactions_df
         mock_excel_handler.existing_columns = list(large_transactions_df.columns)
