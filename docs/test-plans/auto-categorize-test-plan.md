@@ -99,13 +99,13 @@ Due to the comprehensive nature of the Auto Categorize feature (64 test scenario
 
 ```
 tests/
-├── test_auto_categorizer_unit.py          # TC001-TC040 (40 unit tests)
-├── test_auto_categorizer_integration.py   # TC041-TC047 (7 integration tests)
-├── test_auto_categorizer_e2e.py           # TC048-TC051 (4 E2E tests)
-├── test_auto_categorizer_performance.py   # TC052-TC054, TC064 (4 performance tests)
-├── test_auto_categorizer_property.py      # TC060-TC061 (2 property tests)
-├── test_auto_categorizer_security.py      # TC062-TC063 (2 security tests)
-└── test_auto_categorizer_data_integrity.py # TC055-TC059 (5 data integrity/error tests)
+├── test_auto_categorizer_unit.py          # TC001-TC042 (42 unit tests)
+├── test_auto_categorizer_integration.py   # TC043-TC049 (7 integration tests)
+├── test_auto_categorizer_e2e.py           # TC050-TC053 (4 E2E tests)
+├── test_auto_categorizer_performance.py   # TC054-TC056, TC066 (4 performance tests)
+├── test_auto_categorizer_property.py      # TC062-TC063 (2 property tests)
+├── test_auto_categorizer_security.py      # TC064-TC065 (2 security tests)
+└── test_auto_categorizer_data_integrity.py # TC057-TC061 (5 data integrity/error tests)
 ```
 
 ### File Organization Benefits
@@ -134,72 +134,74 @@ pytest -m "performance" tests/test_auto_categorizer*.py
 
 ## Test Scenarios
 
-| Test ID | Category       | Method/Feature              | Description                      | Input/Setup                               | Expected Result                               | Priority | Notes                      |
-| ------- | -------------- | --------------------------- | -------------------------------- | ----------------------------------------- | --------------------------------------------- | -------- | -------------------------- |
-| TC001   | Unit           | `__init__()`                | Valid initialization             | Valid Excel file path                     | Object created successfully                   | High     | Happy path                 |
-| TC002   | Unit           | `__init__()`                | Invalid file path                | Non-existent file                         | Raises FileNotFoundError                      | High     | Error handling             |
-| TC003   | Unit           | `load_rules()`              | Valid AutoCat worksheet          | Worksheet with rules                      | Rules loaded successfully                     | High     | Core functionality         |
-| TC004   | Unit           | `load_rules()`              | Missing AutoCat worksheet        | No AutoCat sheet                          | Returns None, logs warning                    | High     | Graceful degradation       |
-| TC005   | Unit           | `load_rules()`              | Missing Category column          | AutoCat without Category                  | Raises ValueError                             | High     | Validation                 |
-| TC006   | Unit           | `parse_rule_columns()`      | Contains rule                    | "Description Contains"                    | Parsed correctly                              | High     | Rule parsing               |
-| TC007   | Unit           | `parse_rule_columns()`      | Min/Max rules                    | "Amount Min", "Amount Max"                | Parsed correctly                              | High     | Numeric rules              |
-| TC008   | Unit           | `parse_rule_columns()`      | Equals rule                      | "Account Equals"                          | Parsed correctly                              | High     | Exact matching             |
-| TC009   | Unit           | `parse_rule_columns()`      | Starts with rule                 | "Description starts with"                 | Parsed correctly                              | High     | Text prefix                |
-| TC010   | Unit           | `parse_rule_columns()`      | Ends with rule                   | "Description ends with"                   | Parsed correctly                              | High     | Text suffix                |
-| TC011   | Unit           | `parse_rule_columns()`      | Regex rule                       | "Description regex"                       | Parsed correctly                              | High     | Pattern matching           |
-| TC012   | Unit           | `parse_rule_columns()`      | Not contains rule                | "Description not contains"                | Parsed correctly                              | High     | Negative matching          |
-| TC013   | Unit           | `parse_rule_columns()`      | Not equals rule                  | "Account not equals"                      | Parsed correctly                              | High     | Negative exact             |
-| TC014   | Unit           | `parse_rule_columns()`      | Between rule                     | "Amount between"                          | Parsed correctly                              | High     | Range matching             |
-| TC015   | Unit           | `parse_rule_columns()`      | Invalid rule format              | "Invalid Column"                          | Logs warning, ignored                         | Medium   | Error handling             |
-| TC016   | Unit           | `evaluate_rule()`           | Contains match                   | "WALMART" in description                  | Returns True                                  | High     | Text matching              |
-| TC017   | Unit           | `evaluate_rule()`           | Contains no match                | "WALMART" not in description              | Returns False                                 | High     | Text matching              |
-| TC018   | Unit           | `evaluate_rule()`           | Min match                        | Amount >= 100                             | Returns True                                  | High     | Numeric comparison         |
-| TC019   | Unit           | `evaluate_rule()`           | Min no match                     | Amount < 100                              | Returns False                                 | High     | Numeric comparison         |
-| TC020   | Unit           | `evaluate_rule()`           | Max match                        | Amount <= 500                             | Returns True                                  | High     | Numeric comparison         |
-| TC021   | Unit           | `evaluate_rule()`           | Max no match                     | Amount > 500                              | Returns False                                 | High     | Numeric comparison         |
-| TC022   | Unit           | `evaluate_rule()`           | Equals match                     | Exact text match                          | Returns True                                  | High     | Exact matching             |
-| TC023   | Unit           | `evaluate_rule()`           | Equals no match                  | Different text                            | Returns False                                 | High     | Exact matching             |
-| TC024   | Unit           | `evaluate_rule()`           | Starts with match                | "STAR" in "STARBUCKS"                     | Returns True                                  | High     | Prefix matching            |
-| TC025   | Unit           | `evaluate_rule()`           | Starts with no match             | "COFFEE" not start of "STARBUCKS"         | Returns False                                 | High     | Prefix matching            |
-| TC026   | Unit           | `evaluate_rule()`           | Ends with match                  | "UCKS" in "STARBUCKS"                     | Returns True                                  | High     | Suffix matching            |
-| TC027   | Unit           | `evaluate_rule()`           | Ends with no match               | "STAR" not end of "STARBUCKS"             | Returns False                                 | High     | Suffix matching            |
-| TC028   | Unit           | `evaluate_rule()`           | Regex match                      | Pattern matches text                      | Returns True                                  | High     | Pattern matching           |
-| TC029   | Unit           | `evaluate_rule()`           | Regex no match                   | Pattern doesn't match                     | Returns False                                 | High     | Pattern matching           |
-| TC030   | Unit           | `evaluate_rule()`           | Not contains match               | Text doesn't contain value                | Returns True                                  | High     | Negative matching          |
-| TC031   | Unit           | `evaluate_rule()`           | Not contains no match            | Text contains value                       | Returns False                                 | High     | Negative matching          |
-| TC032   | Unit           | `evaluate_rule()`           | Not equals match                 | Values are different                      | Returns True                                  | High     | Negative exact             |
-| TC033   | Unit           | `evaluate_rule()`           | Not equals no match              | Values are same                           | Returns False                                 | High     | Negative exact             |
-| TC034   | Unit           | `evaluate_rule()`           | Between match                    | Value in range                            | Returns True                                  | High     | Range matching             |
-| TC035   | Unit           | `evaluate_rule()`           | Between no match                 | Value outside range                       | Returns False                                 | High     | Range matching             |
-| TC036   | Unit           | `evaluate_rule()`           | Case insensitive                 | "walmart" vs "WALMART"                    | Returns True                                  | High     | Case handling              |
-| TC037   | Unit           | `evaluate_rule()`           | Case sensitive equals            | "Walmart" vs "walmart"                    | Returns False                                 | High     | Case handling              |
-| TC038   | Unit           | `evaluate_rule()`           | Empty rule value                 | Empty cell in rule                        | Returns True (ignored)                        | Medium   | Empty handling             |
-| TC039   | Unit           | `evaluate_rule()`           | Missing transaction column       | Column not in transaction                 | Returns False                                 | Medium   | Missing data               |
-| TC040   | Unit           | `evaluate_rule()`           | Invalid numeric data             | Text in numeric field                     | Returns False                                 | Medium   | Data validation            |
-| TC041   | Integration    | `run_auto_categorization()` | Single rule match                | One matching rule                         | Category assigned, auto-fill applied          | High     | End-to-end                 |
-| TC042   | Integration    | `run_auto_categorization()` | Multiple rules, first match      | Multiple rules, first matches             | First rule applied, others ignored            | High     | Priority logic             |
-| TC043   | Integration    | `run_auto_categorization()` | No rules match                   | No matching rules                         | No changes made                               | High     | No-op scenario             |
-| TC044   | Integration    | `run_auto_categorization()` | Empty category rule              | Rule with empty Category                  | Only auto-fill applied                        | High     | Auto-fill only             |
-| TC045   | Integration    | `run_auto_categorization()` | All transactions categorized     | No uncategorized transactions             | No changes made                               | High     | Edge case                  |
-| TC046   | Integration    | `run_auto_categorization()` | Complex rule combination         | Multiple conditions in one rule           | All conditions must match                     | High     | AND logic                  |
-| TC047   | Integration    | `run_auto_categorization()` | Invalid auto-fill column         | Column not in transaction table           | Auto-fill ignored, logged                     | Medium   | Error handling             |
-| TC048   | E2E            | Complete workflow           | Full categorization process      | Excel file with rules and transactions    | All uncategorized transactions categorized    | High     | End-to-end workflow        |
-| TC049   | E2E            | Workflow with errors        | Process with invalid rules       | Excel file with some invalid rules        | Valid rules applied, invalid rules logged     | High     | Error handling in workflow |
-| TC050   | E2E            | Workflow with no matches    | Process with no matching rules   | Excel file with rules that don't match    | No changes made, process completes            | High     | No-op workflow             |
-| TC051   | E2E            | Workflow with complex rules | Process with multiple rule types | Excel file with various rule combinations | All rule types applied correctly              | High     | Complex workflow           |
-| TC052   | Performance    | `run_auto_categorization()` | Large dataset                    | 10,000 transactions                       | Completes within 30 seconds                   | Medium   | Performance                |
-| TC053   | Performance    | `run_auto_categorization()` | Many rules                       | 100 rules                                 | Completes within 60 seconds                   | Medium   | Performance                |
-| TC054   | Performance    | `run_auto_categorization()` | Complex rules                    | Regex and multiple conditions             | Completes within 45 seconds                   | Medium   | Performance                |
-| TC055   | Data Integrity | `run_auto_categorization()` | Categorized transactions         | Already categorized transactions          | No changes made                               | High     | Data integrity             |
-| TC056   | Data Integrity | `run_auto_categorization()` | Audit trail                      | Changes made                              | Log entries created                           | Medium   | Audit functionality        |
-| TC057   | Error Handling | `run_auto_categorization()` | Corrupted Excel file             | Invalid Excel format                      | Raises appropriate exception                  | High     | Error handling             |
-| TC058   | Error Handling | `run_auto_categorization()` | Permission denied                | Read-only file                            | Raises PermissionError                        | High     | Error handling             |
-| TC059   | Error Handling | `run_auto_categorization()` | Invalid rule syntax              | Malformed rule column                     | Rule ignored, processing continues            | Medium   | Graceful degradation       |
-| TC060   | Property       | `parse_rule_columns()`      | Rule parsing consistency         | Hypothesis-generated rule names           | Parsing always succeeds or fails consistently | Medium   | Property-based             |
-| TC061   | Property       | `evaluate_rule()`           | Rule evaluation properties       | Random rule/transaction combinations      | Evaluation is deterministic and consistent    | Medium   | Property-based             |
-| TC062   | Security       | `__init__()`                | File access validation           | Invalid file paths, permissions           | Proper exception handling                     | High     | Security                   |
-| TC063   | Security       | `load_rules()`              | Input sanitization               | Malicious Excel content                   | Safe handling of malformed data               | High     | Security                   |
-| TC064   | Performance    | `run_auto_categorization()` | Memory usage                     | Large datasets                            | Memory usage stays within limits              | Medium   | Performance                |
+| Test ID | Category       | Method/Feature              | Description                          | Input/Setup                                                      | Expected Result                               | Priority | Notes                      |
+| ------- | -------------- | --------------------------- | ------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------- | -------- | -------------------------- |
+| TC001   | Unit           | `__init__()`                | Valid initialization                 | Valid Excel file path                                            | Object created successfully                   | High     | Happy path                 |
+| TC002   | Unit           | `__init__()`                | Invalid file path                    | Non-existent file                                                | Raises FileNotFoundError                      | High     | Error handling             |
+| TC003   | Unit           | `load_rules()`              | Valid AutoCat worksheet              | Worksheet with rules                                             | Rules loaded successfully                     | High     | Core functionality         |
+| TC004   | Unit           | `load_rules()`              | Missing AutoCat worksheet            | No AutoCat sheet                                                 | Returns None, logs warning                    | High     | Graceful degradation       |
+| TC005   | Unit           | `load_rules()`              | Missing Category column              | AutoCat without Category                                         | Raises ValueError                             | High     | Validation                 |
+| TC006   | Unit           | `parse_rule_columns()`      | Contains rule                        | "Description Contains"                                           | Parsed correctly                              | High     | Rule parsing               |
+| TC007   | Unit           | `parse_rule_columns()`      | Min/Max rules                        | "Amount Min", "Amount Max"                                       | Parsed correctly                              | High     | Numeric rules              |
+| TC008   | Unit           | `parse_rule_columns()`      | Equals rule                          | "Account Equals"                                                 | Parsed correctly                              | High     | Exact matching             |
+| TC009   | Unit           | `parse_rule_columns()`      | Starts with rule                     | "Description starts with"                                        | Parsed correctly                              | High     | Text prefix                |
+| TC010   | Unit           | `parse_rule_columns()`      | Ends with rule                       | "Description ends with"                                          | Parsed correctly                              | High     | Text suffix                |
+| TC011   | Unit           | `parse_rule_columns()`      | Regex rule                           | "Description regex"                                              | Parsed correctly                              | High     | Pattern matching           |
+| TC012   | Unit           | `parse_rule_columns()`      | Not contains rule                    | "Description not contains"                                       | Parsed correctly                              | High     | Negative matching          |
+| TC013   | Unit           | `parse_rule_columns()`      | Not equals rule                      | "Account not equals"                                             | Parsed correctly                              | High     | Negative exact             |
+| TC014   | Unit           | `parse_rule_columns()`      | Between rule                         | "Amount between"                                                 | Parsed correctly                              | High     | Range matching             |
+| TC015   | Unit           | `parse_rule_columns()`      | Invalid rule format                  | "Invalid Column"                                                 | Logs warning, ignored                         | Medium   | Error handling             |
+| TC016   | Unit           | `evaluate_rule()`           | Contains match                       | "WALMART" in description                                         | Returns True                                  | High     | Text matching              |
+| TC017   | Unit           | `evaluate_rule()`           | Contains no match                    | "WALMART" not in description                                     | Returns False                                 | High     | Text matching              |
+| TC018   | Unit           | `evaluate_rule()`           | Min match                            | Amount >= 100                                                    | Returns True                                  | High     | Numeric comparison         |
+| TC019   | Unit           | `evaluate_rule()`           | Min no match                         | Amount < 100                                                     | Returns False                                 | High     | Numeric comparison         |
+| TC020   | Unit           | `evaluate_rule()`           | Max match                            | Amount <= 500                                                    | Returns True                                  | High     | Numeric comparison         |
+| TC021   | Unit           | `evaluate_rule()`           | Max no match                         | Amount > 500                                                     | Returns False                                 | High     | Numeric comparison         |
+| TC022   | Unit           | `evaluate_rule()`           | Equals match                         | Exact text match                                                 | Returns True                                  | High     | Exact matching             |
+| TC023   | Unit           | `evaluate_rule()`           | Equals no match                      | Different text                                                   | Returns False                                 | High     | Exact matching             |
+| TC024   | Unit           | `evaluate_rule()`           | Starts with match                    | "STAR" in "STARBUCKS"                                            | Returns True                                  | High     | Prefix matching            |
+| TC025   | Unit           | `evaluate_rule()`           | Starts with no match                 | "COFFEE" not start of "STARBUCKS"                                | Returns False                                 | High     | Prefix matching            |
+| TC026   | Unit           | `evaluate_rule()`           | Ends with match                      | "UCKS" in "STARBUCKS"                                            | Returns True                                  | High     | Suffix matching            |
+| TC027   | Unit           | `evaluate_rule()`           | Ends with no match                   | "STAR" not end of "STARBUCKS"                                    | Returns False                                 | High     | Suffix matching            |
+| TC028   | Unit           | `evaluate_rule()`           | Regex match                          | Pattern matches text                                             | Returns True                                  | High     | Pattern matching           |
+| TC029   | Unit           | `evaluate_rule()`           | Regex no match                       | Pattern doesn't match                                            | Returns False                                 | High     | Pattern matching           |
+| TC030   | Unit           | `evaluate_rule()`           | Not contains match                   | Text doesn't contain value                                       | Returns True                                  | High     | Negative matching          |
+| TC031   | Unit           | `evaluate_rule()`           | Not contains no match                | Text contains value                                              | Returns False                                 | High     | Negative matching          |
+| TC032   | Unit           | `evaluate_rule()`           | Not equals match                     | Values are different                                             | Returns True                                  | High     | Negative exact             |
+| TC033   | Unit           | `evaluate_rule()`           | Not equals no match                  | Values are same                                                  | Returns False                                 | High     | Negative exact             |
+| TC034   | Unit           | `evaluate_rule()`           | Between match                        | Value in range                                                   | Returns True                                  | High     | Range matching             |
+| TC035   | Unit           | `evaluate_rule()`           | Between no match                     | Value outside range                                              | Returns False                                 | High     | Range matching             |
+| TC036   | Unit           | `evaluate_rule()`           | Case insensitive                     | "walmart" vs "WALMART"                                           | Returns True                                  | High     | Case handling              |
+| TC037   | Unit           | `evaluate_rule()`           | Case sensitive equals                | "Walmart" vs "walmart"                                           | Returns False                                 | High     | Case handling              |
+| TC038   | Unit           | `evaluate_rule()`           | Empty rule value                     | Empty cell in rule                                               | Returns True (ignored)                        | Medium   | Empty handling             |
+| TC039   | Unit           | `evaluate_rule()`           | Missing transaction column           | Column not in transaction                                        | Returns False                                 | Medium   | Missing data               |
+| TC040   | Unit           | `evaluate_rule()`           | Invalid numeric data                 | Text in numeric field                                            | Returns False                                 | Medium   | Data validation            |
+| TC041   | Unit           | `load_rules()`              | Rule with no valid conditions        | Rule row with all condition columns empty                        | Rule is not added to self.rules               | Medium   | Ensures only valid rules   |
+| TC042   | Unit           | `_extract_rule_condition()` | Valid rule format with invalid field | "Description Contains" but "Description" not in existing_columns | Returns None, logs warning                    | Medium   | Field validation           |
+| TC043   | Integration    | `run_auto_categorization()` | Single rule match                    | One matching rule                                                | Category assigned, auto-fill applied          | High     | End-to-end                 |
+| TC044   | Integration    | `run_auto_categorization()` | Multiple rules, first match          | Multiple rules, first matches                                    | First rule applied, others ignored            | High     | Priority logic             |
+| TC045   | Integration    | `run_auto_categorization()` | No rules match                       | No matching rules                                                | No changes made                               | High     | No-op scenario             |
+| TC046   | Integration    | `run_auto_categorization()` | Empty category rule                  | Rule with empty Category                                         | Only auto-fill applied                        | High     | Auto-fill only             |
+| TC047   | Integration    | `run_auto_categorization()` | All transactions categorized         | No uncategorized transactions                                    | No changes made                               | High     | Edge case                  |
+| TC048   | Integration    | `run_auto_categorization()` | Complex rule combination             | Multiple conditions in one rule                                  | All conditions must match                     | High     | AND logic                  |
+| TC049   | Integration    | `run_auto_categorization()` | Invalid auto-fill column             | Column not in transaction table                                  | Auto-fill ignored, logged                     | Medium   | Error handling             |
+| TC050   | E2E            | Complete workflow           | Full categorization process          | Excel file with rules and transactions                           | All uncategorized transactions categorized    | High     | End-to-end workflow        |
+| TC051   | E2E            | Workflow with errors        | Process with invalid rules           | Excel file with some invalid rules                               | Valid rules applied, invalid rules logged     | High     | Error handling in workflow |
+| TC052   | E2E            | Workflow with no matches    | Process with no matching rules       | Excel file with rules that don't match                           | No changes made, process completes            | High     | No-op workflow             |
+| TC053   | E2E            | Workflow with complex rules | Process with multiple rule types     | Excel file with various rule combinations                        | All rule types applied correctly              | High     | Complex workflow           |
+| TC054   | Performance    | `run_auto_categorization()` | Large dataset                        | 10,000 transactions                                              | Completes within 30 seconds                   | Medium   | Performance                |
+| TC055   | Performance    | `run_auto_categorization()` | Many rules                           | 100 rules                                                        | Completes within 60 seconds                   | Medium   | Performance                |
+| TC056   | Performance    | `run_auto_categorization()` | Complex rules                        | Regex and multiple conditions                                    | Completes within 45 seconds                   | Medium   | Performance                |
+| TC057   | Data Integrity | `run_auto_categorization()` | Categorized transactions             | Already categorized transactions                                 | No changes made                               | High     | Data integrity             |
+| TC058   | Data Integrity | `run_auto_categorization()` | Audit trail                          | Changes made                                                     | Log entries created                           | Medium   | Audit functionality        |
+| TC059   | Error Handling | `run_auto_categorization()` | Corrupted Excel file                 | Invalid Excel format                                             | Raises appropriate exception                  | High     | Error handling             |
+| TC060   | Error Handling | `run_auto_categorization()` | Permission denied                    | Read-only file                                                   | Raises PermissionError                        | High     | Error handling             |
+| TC061   | Error Handling | `run_auto_categorization()` | Invalid rule syntax                  | Malformed rule column                                            | Rule ignored, processing continues            | Medium   | Graceful degradation       |
+| TC062   | Property       | `parse_rule_columns()`      | Rule parsing consistency             | Hypothesis-generated rule names                                  | Parsing always succeeds or fails consistently | Medium   | Property-based             |
+| TC063   | Property       | `evaluate_rule()`           | Rule evaluation properties           | Random rule/transaction combinations                             | Evaluation is deterministic and consistent    | Medium   | Property-based             |
+| TC064   | Security       | `__init__()`                | File access validation               | Invalid file paths, permissions                                  | Proper exception handling                     | High     | Security                   |
+| TC065   | Security       | `load_rules()`              | Input sanitization                   | Malicious Excel content                                          | Safe handling of malformed data               | High     | Security                   |
+| TC066   | Performance    | `run_auto_categorization()` | Memory usage                         | Large datasets                                                   | Memory usage stays within limits              | Medium   | Performance                |
 
 ## Test Data Strategy
 
@@ -382,7 +384,7 @@ pytest -m "not slow" tests/test_auto_categorizer*.py
 ## Deliverables
 
 - [ ] Complete test implementation:
-  - [ ] `tests/test_auto_categorizer_unit.py` (40 unit tests)
+  - [ ] `tests/test_auto_categorizer_unit.py` (42 unit tests)
   - [ ] `tests/test_auto_categorizer_integration.py` (7 integration tests)
   - [ ] `tests/test_auto_categorizer_e2e.py` (4 E2E tests)
   - [ ] `tests/test_auto_categorizer_performance.py` (4 performance tests)

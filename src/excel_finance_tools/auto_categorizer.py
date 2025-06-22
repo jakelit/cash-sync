@@ -17,6 +17,20 @@ class AutoCategorizer:
     applying pattern matching rules defined in the AutoCat worksheet.
     """
 
+    # A mapping of user-friendly names to internal types
+    VALID_COMPARISONS = {
+        'contains': 'contains',
+        'not contains': 'not_contains',
+        'equals': 'equals',
+        'not equals': 'not_equals',
+        'starts with': 'starts_with',
+        'ends with': 'ends_with',
+        'min': 'min',
+        'max': 'max',
+        'between': 'between',
+        'regex': 'regex'
+    }
+
     def __init__(self, excel_file: str):
         """
         Initialize the AutoCategorizer with the path to the Excel file.
@@ -112,26 +126,12 @@ class AutoCategorizer:
             self.rules = []
             return
 
-        # A mapping of user-friendly names to internal types
-        valid_comparisons = {
-            'contains': 'contains',
-            'not contains': 'not_contains',
-            'equals': 'equals',
-            'not equals': 'not_equals',
-            'starts with': 'starts_with',
-            'ends with': 'ends_with',
-            'min': 'min',
-            'max': 'max',
-            'between': 'between',
-            'regex': 'regex'
-        }
-
         for _, row in rules_df.iterrows():
-            rule = self._parse_single_rule(row, valid_comparisons)
+            rule = self._parse_single_rule(row)
             if rule['conditions']:
                 self.rules.append(rule)
 
-    def _parse_single_rule(self, row: pd.Series, valid_comparisons: dict) -> dict:
+    def _parse_single_rule(self, row: pd.Series) -> dict:
         """Parse a single rule from a row in the AutoCat sheet."""
         rule = {'category': row['Category'], 'conditions': [], 'auto_fill': {}}
         
@@ -140,7 +140,7 @@ class AutoCategorizer:
                 continue
 
             # Check if it's a rule column
-            rule_condition = self._extract_rule_condition(col_name, value, valid_comparisons)
+            rule_condition = self._extract_rule_condition(col_name, value)
             if rule_condition:
                 rule['conditions'].append(rule_condition)
                 continue
@@ -153,14 +153,22 @@ class AutoCategorizer:
         
         return rule
 
-    def _extract_rule_condition(self, col_name: str, value: any, valid_comparisons: dict) -> dict:
+    def _extract_rule_condition(self, col_name: str, value: any) -> dict:
         """Extract a rule condition from a column name and value."""
-        for comp_display, comp_internal in valid_comparisons.items():
+        # Sort comparisons by length (longest first) to avoid partial matches
+        sorted_comparisons = sorted(self.VALID_COMPARISONS.items(), key=lambda x: len(x[0]), reverse=True)
+        
+        for comp_display, comp_internal in sorted_comparisons:
             if col_name.lower().endswith(' ' + comp_display):
-                field = col_name[:-(len(comp_display) + 1)]  # Extract the field name
-                if field in self.excel_handler.existing_columns:
-                    return {'field': field, 'type': comp_internal, 'value': value}
-                logger.warning("Rule column '%s' ignored: '%s' not found in Transactions table.", col_name, field)
+                # Extract the field name by removing the comparison part and the space before it
+                # Find the position of the comparison pattern (including the space)
+                pattern = ' ' + comp_display
+                field_end_pos = col_name.lower().rfind(pattern)
+                if field_end_pos != -1:
+                    field = col_name[:field_end_pos].strip()
+                    if field in self.excel_handler.existing_columns:
+                        return {'field': field, 'type': comp_internal, 'value': value}
+                    logger.warning("Rule column '%s' ignored: '%s' not found in Transactions table.", col_name, field)
                 break
         return None
 
