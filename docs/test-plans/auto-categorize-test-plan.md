@@ -95,17 +95,17 @@ Input validation, file access permissions, and data sanitization
 ## Test File Organization
 
 ### Multi-File Structure
-Due to the comprehensive nature of the Auto Categorize feature (64 test scenarios across 8 categories), tests are organized into multiple files for better maintainability and parallel execution:
+Due to the comprehensive nature of the Auto Categorize feature (69 test scenarios across 8 categories), tests are organized into multiple files for better maintainability and parallel execution:
 
 ```
 tests/
 ├── test_auto_categorizer_unit.py          # TC001-TC042 (42 unit tests)
-├── test_auto_categorizer_integration.py   # TC043-TC049 (7 integration tests)
-├── test_auto_categorizer_e2e.py           # TC050-TC053 (4 E2E tests)
-├── test_auto_categorizer_performance.py   # TC054-TC056, TC066 (4 performance tests)
-├── test_auto_categorizer_property.py      # TC062-TC063 (2 property tests)
-├── test_auto_categorizer_security.py      # TC064-TC065 (2 security tests)
-└── test_auto_categorizer_data_integrity.py # TC057-TC061 (5 data integrity/error tests)
+├── test_auto_categorizer_integration.py   # TC043-TC057 (15 integration tests)
+├── test_auto_categorizer_e2e.py           # TC058-TC061 (4 E2E tests)
+├── test_auto_categorizer_performance.py   # TC062-TC065 (4 performance tests)
+├── test_auto_categorizer_property.py      # TC068-TC069 (2 property tests)
+├── test_auto_categorizer_security.py      # TC070-TC071 (2 security tests)
+└── test_auto_categorizer_data_integrity.py # TC066-TC067 (2 data integrity tests)
 ```
 
 ### File Organization Benefits
@@ -185,23 +185,28 @@ pytest -m "performance" tests/test_auto_categorizer*.py
 | TC047   | Integration    | `run_auto_categorization()` | All transactions categorized         | No uncategorized transactions                                    | No changes made                               | High     | Edge case                  |
 | TC048   | Integration    | `run_auto_categorization()` | Complex rule combination             | Multiple conditions in one rule                                  | All conditions must match                     | High     | AND logic                  |
 | TC049   | Integration    | `run_auto_categorization()` | Invalid auto-fill column             | Column not in transaction table                                  | Auto-fill ignored, logged                     | Medium   | Error handling             |
-| TC050   | E2E            | Complete workflow           | Full categorization process          | Excel file with rules and transactions                           | All uncategorized transactions categorized    | High     | End-to-end workflow        |
-| TC051   | E2E            | Workflow with errors        | Process with invalid rules           | Excel file with some invalid rules                               | Valid rules applied, invalid rules logged     | High     | Error handling in workflow |
-| TC052   | E2E            | Workflow with no matches    | Process with no matching rules       | Excel file with rules that don't match                           | No changes made, process completes            | High     | No-op workflow             |
-| TC053   | E2E            | Workflow with complex rules | Process with multiple rule types     | Excel file with various rule combinations                        | All rule types applied correctly              | High     | Complex workflow           |
-| TC054   | Performance    | `run_auto_categorization()` | Large dataset                        | 10,000 transactions                                              | Completes within 30 seconds                   | Medium   | Performance                |
-| TC055   | Performance    | `run_auto_categorization()` | Many rules                           | 100 rules                                                        | Completes within 60 seconds                   | Medium   | Performance                |
-| TC056   | Performance    | `run_auto_categorization()` | Complex rules                        | Regex and multiple conditions                                    | Completes within 45 seconds                   | Medium   | Performance                |
-| TC057   | Data Integrity | `run_auto_categorization()` | Categorized transactions             | Already categorized transactions                                 | No changes made                               | High     | Data integrity             |
-| TC058   | Data Integrity | `run_auto_categorization()` | Audit trail                          | Changes made                                                     | Log entries created                           | Medium   | Audit functionality        |
-| TC059   | Error Handling | `run_auto_categorization()` | Corrupted Excel file                 | Invalid Excel format                                             | Raises appropriate exception                  | High     | Error handling             |
-| TC060   | Error Handling | `run_auto_categorization()` | Permission denied                    | Read-only file                                                   | Raises PermissionError                        | High     | Error handling             |
-| TC061   | Error Handling | `run_auto_categorization()` | Invalid rule syntax                  | Malformed rule column                                            | Rule ignored, processing continues            | Medium   | Graceful degradation       |
-| TC062   | Property       | `parse_rule_columns()`      | Rule parsing consistency             | Hypothesis-generated rule names                                  | Parsing always succeeds or fails consistently | Medium   | Property-based             |
-| TC063   | Property       | `evaluate_rule()`           | Rule evaluation properties           | Random rule/transaction combinations                             | Evaluation is deterministic and consistent    | Medium   | Property-based             |
-| TC064   | Security       | `__init__()`                | File access validation               | Invalid file paths, permissions                                  | Proper exception handling                     | High     | Security                   |
-| TC065   | Security       | `load_rules()`              | Input sanitization                   | Malicious Excel content                                          | Safe handling of malformed data               | High     | Security                   |
-| TC066   | Performance    | `run_auto_categorization()` | Memory usage                         | Large datasets                                                   | Memory usage stays within limits              | Medium   | Performance                |
+| TC050   | Integration    | `run_auto_categorization()` | Corrupted Excel file                 | Invalid Excel format                                             | Returns False with appropriate exception      | High     | Exception handling         |
+| TC051   | Integration    | `run_auto_categorization()` | Permission denied                    | Read-only file                                                   | Returns False with PermissionError            | High     | Exception handling         |
+| TC052   | Integration    | `run_auto_categorization()` | Invalid rule syntax                  | Malformed rule column                                            | Rule ignored, processing continues            | Medium   | Graceful degradation       |
+| TC053   | Integration    | `run_auto_categorization()` | Empty AutoCat worksheet              | AutoCat sheet exists but is empty                                | Returns True with warning message             | Medium   | Empty worksheet handling   |
+| TC054   | Integration    | `run_auto_categorization()` | Missing Category column              | Transactions table missing Category column                       | Returns False with ValueError message         | High     | Exception handling         |
+| TC055   | Integration    | `run_auto_categorization()` | FileNotFoundError                    | Excel file not found or corrupted                                | Returns False with FileNotFoundError message  | High     | Exception handling         |
+| TC056   | Integration    | `run_auto_categorization()` | PermissionError                      | Read-only or locked Excel file                                   | Returns False with PermissionError message    | High     | Exception handling         |
+| TC057   | Integration    | `run_auto_categorization()` | OSError                              | General OS error during file operations                          | Returns False with OSError message            | Medium   | Exception handling         |
+| TC058   | E2E            | Complete workflow           | Full categorization process          | Excel file with rules and transactions                           | All uncategorized transactions categorized    | High     | End-to-end workflow        |
+| TC059   | E2E            | Workflow with errors        | Process with invalid rules           | Excel file with some invalid rules                               | Valid rules applied, invalid rules logged     | High     | Error handling in workflow |
+| TC060   | E2E            | Workflow with no matches    | Process with no matching rules       | Excel file with rules that don't match                           | No changes made, process completes            | High     | No-op workflow             |
+| TC061   | E2E            | Workflow with complex rules | Process with multiple rule types     | Excel file with various rule combinations                        | All rule types applied correctly              | High     | Complex workflow           |
+| TC062   | Performance    | `run_auto_categorization()` | Large dataset                        | 10,000 transactions                                              | Completes within 30 seconds                   | Medium   | Performance                |
+| TC063   | Performance    | `run_auto_categorization()` | Many rules                           | 100 rules                                                        | Completes within 60 seconds                   | Medium   | Performance                |
+| TC064   | Performance    | `run_auto_categorization()` | Complex rules                        | Regex and multiple conditions                                    | Completes within 45 seconds                   | Medium   | Performance                |
+| TC065   | Performance    | `run_auto_categorization()` | Memory usage                         | Large datasets                                                   | Memory usage stays within limits              | Medium   | Performance                |
+| TC066   | Data Integrity | `run_auto_categorization()` | Categorized transactions             | Already categorized transactions                                 | No changes made                               | High     | Data integrity             |
+| TC067   | Data Integrity | `run_auto_categorization()` | Audit trail                          | Changes made                                                     | Log entries created                           | Medium   | Audit functionality        |
+| TC068   | Property       | `parse_rule_columns()`      | Rule parsing consistency             | Hypothesis-generated rule names                                  | Parsing always succeeds or fails consistently | Medium   | Property-based             |
+| TC069   | Property       | `evaluate_rule()`           | Rule evaluation properties           | Random rule/transaction combinations                             | Evaluation is deterministic and consistent    | Medium   | Property-based             |
+| TC070   | Security       | `__init__()`                | File access validation               | Invalid file paths, permissions                                  | Proper exception handling                     | High     | Security                   |
+| TC071   | Security       | `load_rules()`              | Input sanitization                   | Malicious Excel content                                          | Safe handling of malformed data               | High     | Security                   |
 
 ## Test Data Strategy
 
@@ -385,12 +390,12 @@ pytest -m "not slow" tests/test_auto_categorizer*.py
 
 - [ ] Complete test implementation:
   - [ ] `tests/test_auto_categorizer_unit.py` (42 unit tests)
-  - [ ] `tests/test_auto_categorizer_integration.py` (7 integration tests)
+  - [ ] `tests/test_auto_categorizer_integration.py` (15 integration tests)
   - [ ] `tests/test_auto_categorizer_e2e.py` (4 E2E tests)
   - [ ] `tests/test_auto_categorizer_performance.py` (4 performance tests)
   - [ ] `tests/test_auto_categorizer_property.py` (2 property tests)
   - [ ] `tests/test_auto_categorizer_security.py` (2 security tests)
-  - [ ] `tests/test_auto_categorizer_data_integrity.py` (5 data integrity tests)
+  - [ ] `tests/test_auto_categorizer_data_integrity.py` (2 data integrity tests)
   - [ ] `tests/conftest.py` (shared fixtures and utilities)
 - [ ] HTML coverage report
 - [ ] XML coverage report (for CI/CD)
