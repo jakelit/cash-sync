@@ -243,7 +243,12 @@ class AutoCategorizer:
         return self._regex_cache[rule_value].search(str(trans_value)) is not None
 
     def _update_transaction(self, df_index: int, category: str, auto_fill_values: Dict):
-        logger.debug("Updating transaction at index %d with Category '%s' and auto-fills: %s", df_index, category, auto_fill_values)
+        # Get the transaction description for better logging
+        transaction = self.excel_handler.existing_df.iloc[df_index]
+        description = transaction.get('Description', 'Unknown')
+        
+        logger.debug("Categorizing transaction '%s' (index %d) as '%s' with auto-fills: %s", 
+                     description, df_index, category, auto_fill_values)
         self.excel_handler.update_cell(df_index, 'Category', category)
         for col, value in auto_fill_values.items():
             self.excel_handler.update_cell(df_index, col, value)
