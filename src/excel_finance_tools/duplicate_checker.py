@@ -4,6 +4,7 @@ duplicate transactions.
 """
 from typing import List, Dict, Any
 import pandas as pd
+from datetime import datetime
 
 
 class DuplicateChecker:
@@ -22,9 +23,35 @@ class DuplicateChecker:
         # Note: Using Full Description instead of Description because Description is often changed by users. 
         # The Full Description is the original description from the bank and provides more reliable duplicate detection.
         def create_comparison_key(row: Dict[str, Any]) -> str:
-            date_str = str(row.get('Date', ''))
-            amount_str = str(row.get('Amount', ''))
-            desc_str = str(row.get('Full Description', ''))[:20].strip()
+            # Normalize date to YYYY-MM-DD format
+            date_value = row.get('Date', '')
+            if pd.isna(date_value) or date_value == '':
+                date_str = ''
+            elif isinstance(date_value, (pd.Timestamp, datetime)):
+                date_str = date_value.strftime('%Y-%m-%d')
+            else:
+                # Try to parse string date
+                try:
+                    parsed_date = pd.to_datetime(str(date_value))
+                    date_str = parsed_date.strftime('%Y-%m-%d')
+                except:
+                    date_str = str(date_value)
+            
+            # Normalize amount to string with 2 decimal places
+            amount_value = row.get('Amount', '')
+            if pd.isna(amount_value) or amount_value == '':
+                amount_str = ''
+            else:
+                try:
+                    amount_float = float(amount_value)
+                    amount_str = f"{amount_float:.2f}"
+                except:
+                    amount_str = str(amount_value)
+            
+            # Get description (try Full Description first, then Description)
+            desc_value = row.get('Full Description', row.get('Description', ''))
+            desc_str = str(desc_value)[:20].strip() if desc_value else ''
+            
             return f"{date_str}|{amount_str}|{desc_str}"
         
         # Create comparison keys for existing transactions
