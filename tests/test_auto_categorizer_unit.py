@@ -32,6 +32,7 @@ def sample_excel_file():
 class TestAutoCategorizerInit:
     """Test AutoCategorizer initialization and configuration."""
 
+    @pytest.mark.unit
     def test_init_with_valid_file_path(self, sample_excel_file):
         """TC001: Test valid initialization with valid Excel file path."""
         categorizer = AutoCategorizer(sample_excel_file)
@@ -42,6 +43,7 @@ class TestAutoCategorizerInit:
         assert hasattr(categorizer, '_comparison_methods')
         assert len(categorizer._comparison_methods) == 10  # All comparison types
 
+    @pytest.mark.unit
     def test_init_with_invalid_file_path(self):
         """TC002: Test initialization with invalid file path raises FileNotFoundError."""
         with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_excel_handler:
@@ -51,6 +53,7 @@ class TestAutoCategorizerInit:
             with pytest.raises(FileNotFoundError):
                 AutoCategorizer("non_existent_file.xlsx")
 
+    @pytest.mark.unit
     def test_init_creates_excel_handler(self, sample_excel_file):
         """TC001: Test that initialization creates ExcelHandler instance."""
         categorizer = AutoCategorizer(sample_excel_file)
@@ -58,6 +61,7 @@ class TestAutoCategorizerInit:
         assert hasattr(categorizer, 'excel_handler')
         assert categorizer.excel_handler.excel_file == sample_excel_file
 
+    @pytest.mark.unit
     def test_load_rules_valid_autocat_worksheet(self, sample_excel_file):
         """TC003: Test loading rules from a valid AutoCat worksheet."""
         categorizer = AutoCategorizer(sample_excel_file)
@@ -73,6 +77,7 @@ class TestAutoCategorizerInit:
                 assert categorizer.rules[0]['category'] == 'Groceries'
                 assert categorizer.rules[1]['category'] == 'Gas'
 
+    @pytest.mark.unit
     def test_load_rules_missing_autocat_worksheet(self, sample_excel_file):
         """TC004: Test behavior when AutoCat worksheet is missing."""
         categorizer = AutoCategorizer(sample_excel_file)
@@ -81,6 +86,7 @@ class TestAutoCategorizerInit:
             categorizer._load_and_parse_rules()
             assert categorizer.rules == []
 
+    @pytest.mark.unit
     def test_load_rules_missing_category_column(self, sample_excel_file):
         """TC005: Test behavior when AutoCat worksheet is missing the Category column."""
         categorizer = AutoCategorizer(sample_excel_file)
@@ -97,6 +103,7 @@ class TestAutoCategorizerInit:
                 error_call = mock_logger.error.call_args[0][0]
                 assert "must contain a 'Category' column" in error_call
 
+    @pytest.mark.unit
     def test_load_rules_rule_with_no_valid_conditions(self, sample_excel_file):
         """TC041: Test that rules with no valid conditions are not added to self.rules."""
         categorizer = AutoCategorizer(sample_excel_file)
@@ -124,6 +131,7 @@ class TestAutoCategorizerRuleParsing:
             cat.excel_handler.existing_columns = ['Description', 'Amount', 'Tags', 'Account']
         return cat
 
+    @pytest.mark.unit
     def test_parse_rule_columns_contains_rule(self, categorizer):
         """TC006: Test parsing 'Description Contains' rule."""
         col_name = "Description Contains"
@@ -136,6 +144,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "contains"
         assert result['value'] == "WALMART"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_min_max_rules(self, categorizer):
         """TC007: Test parsing 'Amount Min' and 'Amount Max' rules."""
         # Test Min rule
@@ -150,6 +159,7 @@ class TestAutoCategorizerRuleParsing:
         assert max_result['type'] == "max"
         assert max_result['value'] == 500
 
+    @pytest.mark.unit
     def test_parse_rule_columns_equals_rule(self, categorizer):
         """TC008: Test parsing 'Account Equals' rule."""
         result = categorizer._extract_rule_condition("Account Equals", "Checking")
@@ -158,6 +168,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "equals"
         assert result['value'] == "Checking"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_starts_with_rule(self, categorizer):
         """TC009: Test parsing 'Description starts with' rule."""
         result = categorizer._extract_rule_condition("Description starts with", "STAR")
@@ -166,6 +177,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "starts_with"
         assert result['value'] == "STAR"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_ends_with_rule(self, categorizer):
         """TC010: Test parsing 'Description ends with' rule."""
         result = categorizer._extract_rule_condition("Description ends with", "UCKS")
@@ -174,6 +186,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "ends_with"
         assert result['value'] == "UCKS"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_regex_rule(self, categorizer):
         """TC011: Test parsing 'Description regex' rule."""
         result = categorizer._extract_rule_condition("Description regex", ".*GAS.*")
@@ -182,6 +195,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "regex"
         assert result['value'] == ".*GAS.*"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_not_contains_rule(self, categorizer):
         """TC012: Test parsing 'Description not contains' rule."""
         result = categorizer._extract_rule_condition("Description not contains", "WALMART")
@@ -190,6 +204,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "not_contains"
         assert result['value'] == "WALMART"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_not_equals_rule(self, categorizer):
         """TC013: Test parsing 'Account not equals' rule."""
         result = categorizer._extract_rule_condition("Account not equals", "Savings")
@@ -198,6 +213,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "not_equals"
         assert result['value'] == "Savings"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_between_rule(self, categorizer):
         """TC014: Test parsing 'Amount between' rule."""
         result = categorizer._extract_rule_condition("Amount between", "100,500")
@@ -206,6 +222,7 @@ class TestAutoCategorizerRuleParsing:
         assert result['type'] == "between"
         assert result['value'] == "100,500"
 
+    @pytest.mark.unit
     def test_parse_rule_columns_invalid_rule_format(self, categorizer):
         """TC015: Test parsing invalid rule format logs warning and returns None."""
         with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
@@ -214,6 +231,7 @@ class TestAutoCategorizerRuleParsing:
             assert result is None
             # Note: The current implementation doesn't log warnings for invalid formats
 
+    @pytest.mark.unit
     def test_parse_single_rule_with_valid_conditions(self, categorizer):
         """TC006, TC007, TC008, TC010: Test parsing a single rule with valid conditions."""
         row_data = {
@@ -231,6 +249,7 @@ class TestAutoCategorizerRuleParsing:
             assert len(rule['conditions']) == 2
             assert rule['auto_fill'] == {'Tags': 'shopping'}
 
+    @pytest.mark.unit
     def test_parse_single_rule_with_empty_category(self, categorizer):
         """TC006, TC010: Test parsing a rule with empty category (auto-fill only)."""
         row_data = {
@@ -247,6 +266,7 @@ class TestAutoCategorizerRuleParsing:
             assert len(rule['conditions']) == 1
             assert rule['auto_fill'] == {'Tags': 'shopping'}
 
+    @pytest.mark.unit
     def test_parse_single_rule_with_invalid_auto_fill_column(self, categorizer):
         """TC047: Test parsing a rule with invalid auto-fill column is ignored and logged."""
         row_data = {
@@ -269,6 +289,7 @@ class TestAutoCategorizerRuleParsing:
                     'Invalid Column'
                 )
 
+    @pytest.mark.unit
     def test_extract_rule_condition_valid_format_invalid_field(self, categorizer):
         """TC042: Test rule column with valid format but field not in transaction table."""
         with patch.object(categorizer.excel_handler, 'existing_columns', ['Amount', 'Category']):  # No 'Description'
@@ -287,10 +308,12 @@ class TestAutoCategorizerRuleEvaluation:
     def categorizer(self, sample_excel_file):
         """Provide a standard AutoCategorizer instance."""
         cat = AutoCategorizer(sample_excel_file)
+        # Ensure existing_columns is always a list
         if getattr(cat.excel_handler, 'existing_columns', None) is None:
             cat.excel_handler.existing_columns = ['Description', 'Amount', 'Tags', 'Account']
         return cat
 
+    @pytest.mark.unit
     def test_evaluate_rule_contains_match(self, categorizer):
         """TC016: Test contains rule with matching text."""
         condition = {'field': 'Description', 'type': 'contains', 'value': 'WALMART'}
@@ -299,6 +322,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_contains_no_match(self, categorizer):
         """TC017: Test contains rule with no matching text."""
         condition = {'field': 'Description', 'type': 'contains', 'value': 'WALMART'}
@@ -307,6 +331,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_min_match(self, categorizer):
         """TC018: Test min rule with matching amount."""
         condition = {'field': 'Amount', 'type': 'min', 'value': 100}
@@ -315,6 +340,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_min_no_match(self, categorizer):
         """TC019: Test min rule with amount below minimum."""
         condition = {'field': 'Amount', 'type': 'min', 'value': 100}
@@ -323,6 +349,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_max_match(self, categorizer):
         """TC020: Test max rule with matching amount."""
         condition = {'field': 'Amount', 'type': 'max', 'value': 500}
@@ -331,6 +358,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_max_no_match(self, categorizer):
         """TC021: Test max rule with amount above maximum."""
         condition = {'field': 'Amount', 'type': 'max', 'value': 500}
@@ -339,6 +367,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_equals_match(self, categorizer):
         """TC022: Test equals rule with exact match."""
         condition = {'field': 'Account', 'type': 'equals', 'value': 'Checking'}
@@ -347,6 +376,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_equals_no_match(self, categorizer):
         """TC023: Test equals rule with different text."""
         condition = {'field': 'Account', 'type': 'equals', 'value': 'Checking'}
@@ -355,6 +385,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_starts_with_match(self, categorizer):
         """TC024: Test starts with rule with matching prefix."""
         condition = {'field': 'Description', 'type': 'starts_with', 'value': 'STAR'}
@@ -363,6 +394,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_starts_with_no_match(self, categorizer):
         """TC025: Test starts with rule with different prefix."""
         condition = {'field': 'Description', 'type': 'starts_with', 'value': 'COFFEE'}
@@ -371,6 +403,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_ends_with_match(self, categorizer):
         """TC026: Test ends with rule with matching suffix."""
         condition = {'field': 'Description', 'type': 'ends_with', 'value': 'COFFEE'}
@@ -378,6 +411,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_ends_with_no_match(self, categorizer):
         """TC027: Test ends with rule with different suffix."""
         condition = {'field': 'Description', 'type': 'ends_with', 'value': 'STAR'}
@@ -386,6 +420,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_regex_match(self, categorizer):
         """TC028: Test regex rule with matching pattern."""
         condition = {'field': 'Description', 'type': 'regex', 'value': r'.*GAS.*'}
@@ -394,6 +429,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_regex_no_match(self, categorizer):
         """TC029: Test regex rule with non-matching pattern."""
         condition = {'field': 'Description', 'type': 'regex', 'value': r'.*GAS.*'}
@@ -402,6 +438,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_not_contains_match(self, categorizer):
         """TC030: Test not contains rule with text that doesn't contain value."""
         condition = {'field': 'Description', 'type': 'not_contains', 'value': 'WALMART'}
@@ -410,6 +447,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_not_contains_no_match(self, categorizer):
         """TC031: Test not contains rule with text that contains value."""
         condition = {'field': 'Description', 'type': 'not_contains', 'value': 'WALMART'}
@@ -418,6 +456,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_not_equals_match(self, categorizer):
         """TC032: Test not equals rule with different values."""
         condition = {'field': 'Account', 'type': 'not_equals', 'value': 'Checking'}
@@ -426,6 +465,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_not_equals_no_match(self, categorizer):
         """TC033: Test not equals rule with same values."""
         condition = {'field': 'Account', 'type': 'not_equals', 'value': 'Checking'}
@@ -434,6 +474,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_between_match(self, categorizer):
         """TC034: Test between rule with value in range."""
         condition = {'field': 'Amount', 'type': 'between', 'value': '100,500'}
@@ -442,6 +483,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_between_no_match(self, categorizer):
         """TC035: Test between rule with value outside range."""
         condition = {'field': 'Amount', 'type': 'between', 'value': '100,500'}
@@ -450,6 +492,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_case_insensitive(self, categorizer):
         """TC036: Test case insensitive comparison for contains."""
         condition = {'field': 'Description', 'type': 'contains', 'value': 'walmart'}
@@ -458,6 +501,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True
 
+    @pytest.mark.unit
     def test_evaluate_rule_case_sensitive_equals(self, categorizer):
         """TC037: Test case sensitive comparison for equals."""
         condition = {'field': 'Account', 'type': 'equals', 'value': 'Walmart'}
@@ -466,6 +510,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_empty_rule_value(self, categorizer):
         """TC038: Test rule with empty value (should be ignored)."""
         condition = {'field': 'Description', 'type': 'contains', 'value': ''}
@@ -474,6 +519,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is True  # Empty values should be ignored
 
+    @pytest.mark.unit
     def test_evaluate_rule_missing_transaction_column(self, categorizer):
         """TC039: Test rule with missing transaction column."""
         condition = {'field': 'NonExistentColumn', 'type': 'contains', 'value': 'WALMART'}
@@ -482,6 +528,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_evaluate_rule_invalid_numeric_data(self, categorizer):
         """TC040: Test rule with invalid numeric data."""
         condition = {'field': 'Amount', 'type': 'min', 'value': 100}
@@ -490,6 +537,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._evaluate_condition(transaction, condition)
         assert result is False
 
+    @pytest.mark.unit
     def test_is_match_all_conditions_must_match(self, categorizer):
         """TC041: Test that all conditions must match for a rule to match (AND logic)."""
         conditions = [
@@ -504,6 +552,7 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._is_match(transaction, conditions)
         assert result is True
 
+    @pytest.mark.unit
     def test_is_match_fails_when_one_condition_fails(self, categorizer):
         """TC041: Test that rule fails when one condition fails (AND logic)."""
         conditions = [
@@ -518,8 +567,9 @@ class TestAutoCategorizerRuleEvaluation:
         result = categorizer._is_match(transaction, conditions)
         assert result is False
 
+    @pytest.mark.unit
     def test_unknown_comparison_type_logs_warning(self, categorizer):
-        """NOT IN PLAN: Test that unknown comparison type logs warning and returns False."""
+        """TC072: Test that unknown comparison type logs warning and returns False."""
         condition = {'field': 'Description', 'type': 'unknown_type', 'value': 'WALMART'}
         transaction = pd.Series({'Description': 'WALMART GROCERY'})
         with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:

@@ -95,11 +95,11 @@ Input validation, file access permissions, and data sanitization
 ## Test File Organization
 
 ### Multi-File Structure
-Due to the comprehensive nature of the Auto Categorize feature (69 test scenarios across 8 categories), tests are organized into multiple files for better maintainability and parallel execution:
+Due to the comprehensive nature of the Auto Categorize feature (70 test scenarios across 8 categories), tests are organized into multiple files for better maintainability and parallel execution:
 
 ```
 tests/
-├── test_auto_categorizer_unit.py          # TC001-TC042 (42 unit tests)
+├── test_auto_categorizer_unit.py          # TC001-TC042, TC072 (43 unit tests)
 ├── test_auto_categorizer_integration.py   # TC043-TC057 (15 integration tests)
 ├── test_auto_categorizer_e2e.py           # TC058-TC061 (4 E2E tests)
 ├── test_auto_categorizer_performance.py   # TC062-TC065 (4 performance tests)
@@ -178,6 +178,7 @@ pytest -m "performance" tests/test_auto_categorizer*.py
 | TC040   | Unit           | `evaluate_rule()`           | Invalid numeric data                 | Text in numeric field                                            | Returns False                                 | Medium   | Data validation            |
 | TC041   | Unit           | `load_rules()`              | Rule with no valid conditions        | Rule row with all condition columns empty                        | Rule is not added to self.rules               | Medium   | Ensures only valid rules   |
 | TC042   | Unit           | `_extract_rule_condition()` | Valid rule format with invalid field | "Description Contains" but "Description" not in existing_columns | Returns None, logs warning                    | Medium   | Field validation           |
+| TC072   | Unit           | `_evaluate_condition()`     | Unknown comparison type              | Condition with unknown comparison type                           | Returns False, logs warning                   | Medium   | Error handling             |
 | TC043   | Integration    | `run_auto_categorization()` | Single rule match                    | One matching rule                                                | Category assigned, auto-fill applied          | High     | End-to-end                 |
 | TC044   | Integration    | `run_auto_categorization()` | Multiple rules, first match          | Multiple rules, first matches                                    | First rule applied, others ignored            | High     | Priority logic             |
 | TC045   | Integration    | `run_auto_categorization()` | No rules match                       | No matching rules                                                | No changes made                               | High     | No-op scenario             |
@@ -389,7 +390,7 @@ pytest -m "not slow" tests/test_auto_categorizer*.py
 ## Deliverables
 
 - [ ] Complete test implementation:
-  - [ ] `tests/test_auto_categorizer_unit.py` (42 unit tests)
+  - [ ] `tests/test_auto_categorizer_unit.py` (43 unit tests)
   - [ ] `tests/test_auto_categorizer_integration.py` (15 integration tests)
   - [ ] `tests/test_auto_categorizer_e2e.py` (4 E2E tests)
   - [ ] `tests/test_auto_categorizer_performance.py` (4 performance tests)

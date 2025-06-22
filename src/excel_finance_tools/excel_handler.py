@@ -11,6 +11,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.worksheet.datavalidation import DataValidation
+import numpy as np
 
 from .duplicate_checker import DuplicateChecker
 from .logger import logger
@@ -167,6 +168,13 @@ formatting management in the code.
             cell.value = value
             
             # Also update the in-memory dataframe to keep it consistent
+            # --- FIX: Ensure dtype compatibility before assignment ---
+            # If assigning a non-numeric value (e.g., a string) to a column that is not already of dtype 'object',
+            # cast the column to 'object' first. This prevents pandas FutureWarning about setting a value
+            # of incompatible dtype (e.g., assigning a string to a float64 column), which will be an error in the future.
+            if not pd.isna(value) and not isinstance(value, (int, float, np.number)):
+                if self.existing_df[column_name].dtype != object:
+                    self.existing_df[column_name] = self.existing_df[column_name].astype(object)
             self.existing_df.loc[df_index, column_name] = value
 
         except (ValueError, TypeError, AttributeError, KeyError, OSError):
