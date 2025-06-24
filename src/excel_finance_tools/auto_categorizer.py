@@ -194,12 +194,11 @@ class AutoCategorizer:
 
         if pd.isna(trans_value):
             return False
-
+        
         comparison_func = self._comparison_methods.get(comp_type)
         if not comparison_func:
             logger.warning("Unknown comparison type: %s", comp_type)
             return False
-
         try:
             return comparison_func(trans_value, rule_value)
         except (ValueError, TypeError) as e:

@@ -64,6 +64,21 @@ The importer will map the source data to the following standard columns in the "
 5.  **Data Appending**: Any transaction that is not identified as a duplicate is appended as a new row to the "Transactions" table in the Excel file.
 6.  **Save Workbook**: After all new transactions have been appended, the Excel workbook is saved.
 
+## Description Processing
+
+The importer automatically cleans and formats transaction descriptions to make them more human-readable:
+
+- **Bank Prefix Removal**: Removes common bank prefixes like "Debit Card Purchase - ", "Credit Card Purchase - ", "Card Purchase - ", and "Purchase - "
+- **Payment Processor Prefix Removal**: Removes payment processor prefixes like "TST* " (Toast), "SQ* " (Square), "SP* " (Stripe), "PP* " (PayPal), "AMZN* " (Amazon), "UBER* " (Uber), "LYFT* " (Lyft), and their variants
+- **Store Number Removal**: Removes store numbers and location codes (patterns like #243, #1760, and standalone 4-6 digit numbers)
+- **Text Formatting**: Converts descriptions to title case (first letter of each word capitalized) and cleans up extra spaces and formatting
+- **Spacing Cleanup**: Fixes spacing after commas and removes excessive whitespace
+- **Duplicate Detection**: Uses the original (uncleaned) description for duplicate detection to ensure consistency, while the cleaned description is displayed to users
+
+**Example Transformation:**
+- **Original**: "Debit Card Purchase - TST* STARBUCKS COFFEE #1234"
+- **Cleaned**: "Starbucks Coffee"
+
 ## Duplicate Detection System
 
 The duplicate checker prevents the same transaction from being imported multiple times, ensuring data integrity.
@@ -111,6 +126,7 @@ The system uses the original bank description (not user-editable "Description") 
 ## Error Handling
 - **Invalid File Format**: If a selected CSV file does not match the expected format for the chosen institution, the import will fail, and an error message will be displayed to the user.
 - **File Not Found**: Errors are shown if the source or destination files cannot be read or written to.
+- **Missing or Invalid Dates**: If a transaction has a missing or unparseable date, the Date field will be left empty in the Excel file. A warning will be logged, and the user will need to manually correct these dates after import. Other date-related fields (Year, Month, Week) will also be left empty for these transactions.
 - **Logging**: Detailed logs are written to the `logs/` directory for debugging purposes, capturing each step of the import process and any errors that occur.
 
 ## Data Integrity

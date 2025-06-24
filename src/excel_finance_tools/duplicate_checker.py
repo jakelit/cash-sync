@@ -3,8 +3,8 @@ This module provides the DuplicateChecker class to identify and filter
 duplicate transactions.
 """
 from typing import List, Dict, Any
-import pandas as pd
 from datetime import datetime
+import pandas as pd
 
 
 class DuplicateChecker:
@@ -34,7 +34,7 @@ class DuplicateChecker:
                 try:
                     parsed_date = pd.to_datetime(str(date_value))
                     date_str = parsed_date.strftime('%Y-%m-%d')
-                except:
+                except (ValueError, TypeError):
                     date_str = str(date_value)
             
             # Normalize amount to string with 2 decimal places
@@ -45,7 +45,7 @@ class DuplicateChecker:
                 try:
                     amount_float = float(amount_value)
                     amount_str = f"{amount_float:.2f}"
-                except:
+                except (ValueError, TypeError):
                     amount_str = str(amount_value)
             
             # Get description (try Full Description first, then Description)

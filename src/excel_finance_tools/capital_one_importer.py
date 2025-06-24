@@ -29,7 +29,7 @@ class CapitalOneImporter(BaseImporter):
         self.set_column_mapping('Transaction Type', 'Transaction Type')
         
     def get_expected_columns(self):
-        """Return the expected columns for CapitalOne's CSV file."""
+        """Return the expected columns for Capital One's CSV file."""
         return [
             'Account Number',
             'Transaction Description',
@@ -40,12 +40,12 @@ class CapitalOneImporter(BaseImporter):
         ]
     
     def get_institution_name(self):
-        """Return the institution name for CapitalOne."""
+        """Return the institution name for Capital  One."""
         return 'Capital One'
     
     def get_account_name(self):
-        """Return the default account name for CapitalOne."""
-        return 'CapitalOne'
+        """Return the default account name for Capital One."""
+        return 'Capital One'
     
     def parse_transaction_amount(self, amount_str, transaction_type=None):
         """Parse transaction amount and determine if it's a debit or credit."""

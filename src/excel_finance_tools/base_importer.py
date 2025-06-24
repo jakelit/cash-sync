@@ -54,22 +54,22 @@ class BaseImporter(ABC):
     @abstractmethod
     def get_expected_columns(self):
         """Return the expected columns for this bank's CSV file."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def get_institution_name(self):
         """Return the institution name for this bank."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def get_account_name(self):
         """Return the default account name for this bank."""
-        pass
-    
+        raise NotImplementedError  # pragma: no cover
+
     @abstractmethod
     def parse_transaction_amount(self, amount_str, transaction_type=None):
         """Parse transaction amount and determine if it's a debit or credit."""
-        pass
+        raise NotImplementedError  # pragma: no cover
 
     def set_column_mapping(self, source_column: str, target_column: str):
         """Set a custom column mapping for this bank."""
@@ -110,13 +110,13 @@ class BaseImporter(ABC):
             # Last resort - try pandas
             date = pd.to_datetime(date_str, errors='coerce').date()
             if pd.isna(date):
-                return datetime.now().date()
+                logger.warning("Could not parse date: '%s'. Date field will be left empty for manual correction.", date_str)
+                return None
             return date
                 
         except (ValueError, TypeError, OSError) as date_error:
-            logger.error("Date parsing error: %s", date_error)
-            logger.debug("Raw date value: '%s'", date_str)
-            return datetime.now().date()
+            logger.warning("Date parsing error for '%s': %s. Date field will be left empty for manual correction.", date_str, date_error)
+            return None
 
     def validate_files(self, csv_file, excel_file):
         """Validate that input files exist and are accessible."""
@@ -141,6 +141,9 @@ class BaseImporter(ABC):
     
     def format_date_mdy(self, date_obj):
         """Format date as M/D/YYYY (without leading zeros) - cross-platform compatible."""
+        if date_obj is None:
+            return ''
+        
         if isinstance(date_obj, str):
             return date_obj
         
@@ -229,10 +232,15 @@ class BaseImporter(ABC):
                     str(self.get_column_value(row, 'Transaction Type')).lower().strip()
                 )
                 
-                # Calculate date-related fields
-                year_start = datetime(trans_date.year, 1, 1)
-                month_start = datetime(trans_date.year, trans_date.month, 1)
-                week_start = self.get_week_start(trans_date)
+                if trans_date is None:
+                    year_start = ''
+                    month_start = ''
+                    week_start = ''
+                else:
+                    # Calculate date-related fields
+                    year_start = datetime(trans_date.year, 1, 1)
+                    month_start = datetime(trans_date.year, trans_date.month, 1)
+                    week_start = self.get_week_start(trans_date)
                 
                 # Create transaction mapping
                 transaction = {
