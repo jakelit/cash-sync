@@ -208,3 +208,61 @@ class TestExcelHandlerUnit:
         assert not handler._is_date_column("Amount")
         assert not handler._is_date_column("Description")
         assert not handler._is_date_column("Category")
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize("exception_type", [
+        ValueError, FileNotFoundError, OSError, pd.errors.EmptyDataError, pd.errors.ParserError
+    ])
+    def test_get_autocat_rules_error_handling(self, mocker, tmp_path, exception_type):
+        """UT073: get_autocat_rules() handles missing/invalid AutoCat worksheet and returns None on error."""
+        # Create a dummy Excel file
+        excel_file = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Transactions"
+        ws.append(["Date", "Amount", "Description"])
+        ws.append(["2024-01-01", 10.0, "Test"])
+        tab = Table(displayName="Transactions", ref="A1:C2")
+        style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+                              showLastColumn=False, showRowStripes=True, showColumnStripes=True)
+        tab.tableStyleInfo = style
+        ws.add_table(tab)
+        wb.save(str(excel_file))
+        handler = ExcelHandler(str(excel_file))
+        # Patch pd.read_excel to raise the exception
+        mocker.patch("pandas.read_excel", side_effect=exception_type)
+        result = handler.get_autocat_rules()
+        assert result is None
+
+    @pytest.mark.unit
+    def test_update_cell_missing_column(self, mocker, tmp_path):
+        """UT074: update_cell() handles missing column by logging warning and returning early."""
+        # Create a dummy Excel file
+        excel_file = tmp_path / "test.xlsx"
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Transactions"
+        ws.append(["Date", "Amount", "Description"])
+        ws.append(["2024-01-01", 10.0, "Test"])
+        tab = Table(displayName="Transactions", ref="A1:C2")
+        style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+                              showLastColumn=False, showRowStripes=True, showColumnStripes=True)
+        tab.tableStyleInfo = style
+        ws.add_table(tab)
+        wb.save(str(excel_file))
+        handler = ExcelHandler(str(excel_file))
+        handler.load_workbook()
+        handler.column_mapping = {"Date": 1, "Amount": 2, "Description": 3}  # No 'Category'
+        handler.existing_df = mocker.Mock()
+        handler.ws = mocker.Mock()
+        # Patch logger to check for warning
+        mock_logger = mocker.patch("excel_finance_tools.excel_handler.logger")
+        # Call update_cell with a missing column
+        result = handler.update_cell(0, "Category", "TestValue")
+        # Should log a warning and return early
+        mock_logger.warning.assert_called_once_with(
+            "Column '%s' not found in the Excel table. Cannot update cell.", "Category"
+        )
+        # Should not attempt to update worksheet
+        handler.ws.cell.assert_not_called()
+        assert result is None

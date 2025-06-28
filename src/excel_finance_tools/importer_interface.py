@@ -14,32 +14,32 @@ class TransactionImporter(ABC):
     @abstractmethod
     def get_expected_columns(self) -> List[str]:
         """Return the expected columns for this bank's CSV file."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def get_institution_name(self) -> str:
         """Return the institution name for this bank."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def get_account_name(self) -> str:
         """Return the default account name for this bank."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def parse_transaction_amount(self, amount_str: str, transaction_type: str = None) -> float:
         """Parse transaction amount and determine if it's a debit or credit."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def parse_transaction_date(self, date_str: str) -> str:
         """Parse transaction date from string."""
-        pass
+        raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
     def clean_description(self, description: str) -> str:
         """Clean and format transaction description to be more human readable."""
-        pass
+        raise NotImplementedError  # pragma: no cover
 
     @abstractmethod
     def import_transactions(self, csv_file: str, excel_file: str):
@@ -50,4 +50,4 @@ class TransactionImporter(ABC):
             csv_file (str): The path to the CSV file containing transaction data.
             excel_file (str): The path to the Excel file where transactions will be saved.
         """
-        pass 
+        raise NotImplementedError  # pragma: no cover

@@ -25,28 +25,39 @@ class DuplicateChecker:
         def create_comparison_key(row: Dict[str, Any]) -> str:
             # Normalize date to YYYY-MM-DD format
             date_value = row.get('Date', '')
-            if pd.isna(date_value) or date_value == '':
-                date_str = ''
-            elif isinstance(date_value, (pd.Timestamp, datetime)):
-                date_str = date_value.strftime('%Y-%m-%d')
+            # If the value is a scalar (string, int, float, pd.Timestamp, datetime), handle as before
+            scalar_types = (str, int, float, pd.Timestamp, datetime)
+            if isinstance(date_value, scalar_types):
+                if pd.isna(date_value) or date_value == '':
+                    date_str = ''
+                elif isinstance(date_value, (pd.Timestamp, datetime)):
+                    date_str = date_value.strftime('%Y-%m-%d')
+                else:
+                    # Try to parse string date
+                    try:
+                        parsed_date = pd.to_datetime(str(date_value))
+                        date_str = parsed_date.strftime('%Y-%m-%d')
+                    except (ValueError, TypeError):
+                        date_str = str(date_value)
             else:
-                # Try to parse string date
-                try:
-                    parsed_date = pd.to_datetime(str(date_value))
-                    date_str = parsed_date.strftime('%Y-%m-%d')
-                except (ValueError, TypeError):
-                    date_str = str(date_value)
+                # For non-scalar types (e.g., list, dict), fallback to string representation
+                date_str = str(date_value)
             
             # Normalize amount to string with 2 decimal places
             amount_value = row.get('Amount', '')
-            if pd.isna(amount_value) or amount_value == '':
-                amount_str = ''
+            scalar_types = (str, int, float)
+            if isinstance(amount_value, scalar_types):
+                if pd.isna(amount_value) or amount_value == '':
+                    amount_str = ''
+                else:
+                    try:
+                        amount_float = float(amount_value)
+                        amount_str = f"{amount_float:.2f}"
+                    except (ValueError, TypeError):
+                        amount_str = str(amount_value)
             else:
-                try:
-                    amount_float = float(amount_value)
-                    amount_str = f"{amount_float:.2f}"
-                except (ValueError, TypeError):
-                    amount_str = str(amount_value)
+                # For non-scalar types (e.g., list, dict), fallback to string representation
+                amount_str = str(amount_value)
             
             # Get description (try Full Description first, then Description)
             desc_value = row.get('Full Description', row.get('Description', ''))

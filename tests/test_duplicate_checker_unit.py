@@ -1,6 +1,7 @@
 import pytest
 from excel_finance_tools.duplicate_checker import DuplicateChecker
 import pandas as pd
+import numpy as np
 
 class TestDuplicateCheckerUnit:
     """Unit tests for DuplicateChecker class."""
@@ -111,3 +112,179 @@ class TestDuplicateCheckerUnit:
         ]
         filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
         assert filtered == [{'Date': '2024-01-03', 'Amount': '3.00', 'Full Description': 'C'}]
+
+    @pytest.mark.unit
+    def test_create_comparison_key_date_as_pd_timestamp(self):
+        """UT067: Date as pd.Timestamp - Should match string date and filter as duplicate."""
+        existing_df = pd.DataFrame([
+            {'Date': pd.Timestamp('2024-01-01'), 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []
+
+    @pytest.mark.unit
+    def test_create_comparison_key_date_as_datetime(self):
+        """UT068: Date as datetime object - Should match string date and filter as duplicate."""
+        from datetime import datetime
+        import pandas as pd
+        existing_df = pd.DataFrame([
+            {'Date': datetime(2024, 1, 1), 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []
+
+    @pytest.mark.unit
+    def test_create_comparison_key_date_unparseable_type(self):
+        """UT069: Date as unparseable type - Should fallback to str(date_value) and use that in the comparison key."""
+        import pandas as pd
+        # Case 1: Existing has list, new has string (should NOT match)
+        existing_df = pd.DataFrame([
+            {'Date': [2024, 1, 1], 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == new_txns  # Not a duplicate
+
+        # Case 2: Both have the same unparseable type/value (should match)
+        existing_df = pd.DataFrame([
+            {'Date': [2024, 1, 1], 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': [2024, 1, 1], 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 3: Dict as date
+        existing_df = pd.DataFrame([
+            {'Date': {'y':2024,'m':1,'d':1}, 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': {'y':2024,'m':1,'d':1}, 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 4: Dict vs string (should NOT match)
+        existing_df = pd.DataFrame([
+            {'Date': {'y':2024,'m':1,'d':1}, 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == new_txns  # Not a duplicate
+
+    @pytest.mark.unit
+    def test_create_comparison_key_date_invalid_string(self):
+        """UT070: Date as invalid string - Should fallback to str(date_value) in the comparison key."""
+        existing_df = pd.DataFrame([
+            {'Date': 'not-a-date', 'Amount': '10.00', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': 'not-a-date', 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Also test that a different invalid string does not match
+        new_txns = [
+            {'Date': 'foo', 'Amount': '10.00', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == new_txns  # Not a duplicate
+
+    @pytest.mark.unit
+    def test_create_comparison_key_amount_isna(self):
+        """UT071: Amount as None, pd.NA, or numpy.nan - Should treat as empty and set amount_str to ''."""
+        # Case 1: Amount is None
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': None, 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': None, 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 2: Amount is pd.NA
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': pd.NA, 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': pd.NA, 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 3: Amount is numpy.nan
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': np.nan, 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': np.nan, 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 4: Amount is empty string
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': '', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': '', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+    @pytest.mark.unit
+    def test_create_comparison_key_amount_invalid_type(self):
+        """UT072: Amount as invalid string or unparseable type - Should fallback to str(amount_value) in the comparison key."""
+        import pandas as pd
+        # Case 1: Amount is a non-numeric string
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': 'foo', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': 'foo', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 2: Amount is a list
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': [1,2,3], 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': [1,2,3], 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 3: Amount is a dict
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': {'a':1}, 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': {'a':1}, 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == []  # Is a duplicate
+
+        # Case 4: Amount is a different invalid string (should not match)
+        existing_df = pd.DataFrame([
+            {'Date': '2024-01-01', 'Amount': 'foo', 'Full Description': 'Test'}
+        ])
+        new_txns = [
+            {'Date': '2024-01-01', 'Amount': 'bar', 'Full Description': 'Test'}
+        ]
+        filtered = DuplicateChecker.check_for_duplicates(existing_df, new_txns)
+        assert filtered == new_txns  # Not a duplicate
