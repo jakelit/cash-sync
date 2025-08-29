@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Last Updated:** 2025-06-22
-**Author:** Jacob
+**Author:** AI
 **Reviewer:** Jacob
 
 ## Introduction

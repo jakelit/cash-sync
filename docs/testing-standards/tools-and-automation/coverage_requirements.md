@@ -17,9 +17,28 @@ This document defines our code coverage standards, measurement practices, and en
 
 ### Project-Level Targets
 
+> **📋 COVERAGE REQUIREMENTS - SINGLE SOURCE OF TRUTH**
+> 
+> These are the official coverage requirements for the Cash Sync project. All other documentation should reference these values.
+> 
+> **🎯 DRY PRINCIPLE**: This document follows the "Don't Repeat Yourself" principle. Coverage requirements defined here should be referenced by other documentation rather than duplicated.
+
 - **Overall Project:** 90% line coverage, 85% branch coverage
 - **New Code:** 95% line coverage, 90% branch coverage
 - **Critical Modules:** 95% line coverage, 95% branch coverage
+
+### Coverage Constants
+
+For programmatic access and documentation consistency:
+
+```python
+# Coverage thresholds - single source of truth
+PROJECT_LINE_COVERAGE = 90
+PROJECT_BRANCH_COVERAGE = 85
+NEW_CODE_LINE_COVERAGE = 95
+NEW_CODE_BRANCH_COVERAGE = 90
+CRITICAL_MODULE_COVERAGE = 95
+```
 
 ## 🎯 Coverage Configuration
 
