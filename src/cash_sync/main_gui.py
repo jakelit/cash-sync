@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-This module provides the main graphical user interface for the Excel Finance Tools.
+This module provides the main graphical user interface for the Cash Sync application.
 
-It defines the main application window, `ExcelFinanceToolsApp`, which serves as
+It defines the main application window, `CashSyncApp`, which serves as
 the controller for managing different UI frames, and the `MainMenuFrame`, which
 is the initial screen that allows users to navigate to the application's
 different features like importing and auto-categorizing transactions.
@@ -14,15 +14,15 @@ from tkinter import ttk
 from .importer_gui import ImporterGUIFrame
 from .auto_categorize_gui import AutoCategorizeFrame
 
-class ExcelFinanceToolsApp(tk.Tk):
+class CashSyncApp(tk.Tk):
     """
-    Main application class for Excel Finance Tools.
+    Main application class for Cash Sync.
     Manages a single window with multiple frames for different functionalities.
     """
     
     def __init__(self):
         super().__init__()
-        self.title("Excel Finance Tools")
+        self.title("Cash Sync")
         self.geometry("800x600")
         self.configure(bg="#f0f0f0")
 
@@ -109,7 +109,7 @@ class MainMenuFrame(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         
-        title_label = ttk.Label(main_frame, text="Excel Finance Tools", style="Title.TLabel")
+        title_label = ttk.Label(main_frame, text="Cash Sync", style="Title.TLabel")
         title_label.grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
         subtitle_label = ttk.Label(main_frame, text="Select an action to get started", style="Subtitle.TLabel")

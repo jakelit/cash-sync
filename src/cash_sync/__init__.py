@@ -34,7 +34,7 @@ from .importer_interface import TransactionImporter
 from .excel_handler import ExcelHandler
 from .csv_handler import CSVHandler
 from .duplicate_checker import DuplicateChecker
-from .main_gui import ExcelFinanceToolsApp
+from .main_gui import CashSyncApp
 from .logger import logger
 from .auto_categorizer import AutoCategorizer
 
@@ -45,7 +45,7 @@ BANKS = {
 }
 
 def main():
-    """Main entry point for the Excel Finance Tools application.
+    """Main entry point for the Cash Sync application.
     
     Handles command-line arguments and routes to appropriate functionality:
     - import: Import transactions from CSV to Excel
@@ -53,7 +53,7 @@ def main():
     - GUI: Launch the graphical user interface (default)
     """
     parser = argparse.ArgumentParser(
-        description='Excel Finance Tools.',
+        description='Cash Sync.',
         epilog='''
 Examples:
   python run.py import capitalone transactions.csv my_finances.xlsx
@@ -75,7 +75,7 @@ Examples:
     autocat_parser = subparsers.add_parser('autocat', help='Automatically categorize transactions in an Excel file.')
     autocat_parser.add_argument('excel_file', help='Path to the Excel file to categorize.')
 
-    parser.add_argument('--version', action='version', version='Excel Finance Tools 1.1')
+    parser.add_argument('--version', action='version', version='Cash Sync 1.1')
     
     args = parser.parse_args()
     
@@ -107,7 +107,7 @@ Examples:
         # Show main GUI dialog
         logger.info("No command provided, starting GUI...")
         try:
-            app = ExcelFinanceToolsApp()
+            app = CashSyncApp()
             app.run()
         except (ImportError, ModuleNotFoundError, OSError) as e:
             logger.error("Error starting GUI: %s", e)
@@ -125,6 +125,6 @@ __all__ = [
     'ExcelHandler',
     'CSVHandler',
     'DuplicateChecker',
-    'ExcelFinanceToolsApp',
+    'CashSyncApp',
     'AutoCategorizer'
 ]

@@ -12,7 +12,7 @@ from openpyxl import Workbook
 import tempfile
 import os
 
-from excel_finance_tools.auto_categorizer import AutoCategorizer
+from cash_sync.auto_categorizer import AutoCategorizer
 
 @pytest.fixture
 def sample_excel_file():
@@ -48,7 +48,7 @@ class TestAutoCategorizerInit:
     @pytest.mark.unit
     def test_init_with_invalid_file_path(self):
         """UT002: Test initialization with invalid file path."""
-        with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_excel_handler:
+        with patch('cash_sync.auto_categorizer.ExcelHandler') as mock_excel_handler:
             # Configure the mock to raise FileNotFoundError when instantiated
             mock_excel_handler.side_effect = FileNotFoundError("File not found")
             
@@ -77,7 +77,7 @@ class TestAutoCategorizerInit:
         categorizer = AutoCategorizer(sample_excel_file)
         # Mock get_autocat_rules to return None
         with patch.object(categorizer.excel_handler, 'get_autocat_rules', return_value=None):
-            with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+            with patch('cash_sync.auto_categorizer.logger') as mock_logger:
                 categorizer._load_and_parse_rules()
                 mock_logger.warning.assert_called_with("AutoCat worksheet not found or empty")
                 assert len(categorizer.rules) == 0
@@ -92,7 +92,7 @@ class TestAutoCategorizerInit:
             {'Amount Min': 100}
         ])
         with patch.object(categorizer.excel_handler, 'get_autocat_rules', return_value=rules_df):
-            with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+            with patch('cash_sync.auto_categorizer.logger') as mock_logger:
                 categorizer._load_and_parse_rules()
                 # The actual implementation logs an ERROR and sets rules to empty list
                 mock_logger.error.assert_called_with("The 'AutoCat' sheet must contain a 'Category' column.")
@@ -220,7 +220,7 @@ class TestAutoCategorizerRuleParsing:
     @pytest.mark.unit
     def test_parse_rule_columns_invalid_rule_format(self, categorizer):
         """UT015: Test parsing invalid rule format logs warning and returns None."""
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             result = categorizer._extract_rule_condition("Invalid Column", "value")
             
             assert result is None
@@ -272,7 +272,7 @@ class TestAutoCategorizerRuleParsing:
         row = pd.Series(row_data)
         
         with patch.object(categorizer.excel_handler, 'existing_columns', ['Description', 'Category']):
-            with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+            with patch('cash_sync.auto_categorizer.logger') as mock_logger:
                 rule = categorizer._parse_single_rule(row)
                 
                 # Verify the rule is still created correctly
@@ -288,7 +288,7 @@ class TestAutoCategorizerRuleParsing:
     def test_extract_rule_condition_valid_format_invalid_field(self, categorizer):
         """UT042: Test rule column with valid format but field not in transaction table."""
         with patch.object(categorizer.excel_handler, 'existing_columns', ['Amount', 'Category']):  # No 'Description'
-            with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+            with patch('cash_sync.auto_categorizer.logger') as mock_logger:
                 result = categorizer._extract_rule_condition("Description Contains", "WALMART")
                 assert result is None
                 mock_logger.warning.assert_called_with(
@@ -567,7 +567,7 @@ class TestAutoCategorizerRuleEvaluation:
         """UT043: Test that unknown comparison type logs warning and returns False."""
         condition = {'field': 'Description', 'type': 'unknown_type', 'value': 'WALMART'}
         transaction = pd.Series({'Description': 'WALMART GROCERY'})
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             result = categorizer._evaluate_condition(transaction, condition)
             assert result is False
             mock_logger.warning.assert_called()

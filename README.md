@@ -1,4 +1,4 @@
-# Excel Finance Tools
+# Cash Sync
 
 A Python package for importing and managing bank transactions in Excel spreadsheets. This tool supports multiple banks including Ally and Capital One, and provides both command-line and GUI interfaces for importing transactions.
 
@@ -15,8 +15,8 @@ A Python package for importing and managing bank transactions in Excel spreadshe
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/jakelit/excelFinanceTools.git
-cd excelFinanceTools
+git clone https://github.com/jakelit/cash-sync.git
+cd cash-sync
 ```
 
 2. Install runtime dependencies:
@@ -60,8 +60,8 @@ For more details on specific features, see the documentation in the `docs/` dire
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/jakelit/excelFinanceTools.git
-cd excelFinanceTools
+git clone https://github.com/jakelit/cash-sync.git
+cd cash-sync
 ```
 
 2. Create and activate a virtual environment:

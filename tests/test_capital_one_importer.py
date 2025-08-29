@@ -1,5 +1,5 @@
 import pytest
-from excel_finance_tools.capital_one_importer import CapitalOneImporter
+from cash_sync.capital_one_importer import CapitalOneImporter
 
 class TestCapitalOneImporterUnit:
     """Unit tests for CapitalOneImporter class."""
@@ -25,7 +25,7 @@ class TestCapitalOneImporterUnit:
     @pytest.mark.unit
     def test_get_expected_columns(self):
         """UT018: Capital One columns - Should return Capital One columns."""
-        from excel_finance_tools.capital_one_importer import CapitalOneImporter
+        from cash_sync.capital_one_importer import CapitalOneImporter
         cap1 = CapitalOneImporter()
         expected = [
             'Account Number',
@@ -40,13 +40,13 @@ class TestCapitalOneImporterUnit:
     @pytest.mark.unit
     def test_get_institution_name(self):
         """UT019: Institution name - Should return institution name for CapitalOneImporter."""
-        from excel_finance_tools.capital_one_importer import CapitalOneImporter
+        from cash_sync.capital_one_importer import CapitalOneImporter
         cap1 = CapitalOneImporter()
         assert cap1.get_institution_name() == "Capital One"
 
     @pytest.mark.unit
     def test_get_account_name(self):
         """UT020: Account name - Should return account name for CapitalOneImporter."""
-        from excel_finance_tools.capital_one_importer import CapitalOneImporter
+        from cash_sync.capital_one_importer import CapitalOneImporter
         cap1 = CapitalOneImporter()
         assert cap1.get_account_name() == "Capital One"

@@ -1,5 +1,5 @@
 import pytest
-from excel_finance_tools.duplicate_checker import DuplicateChecker
+from cash_sync.duplicate_checker import DuplicateChecker
 import pandas as pd
 import numpy as np
 

@@ -1,5 +1,5 @@
 import pytest
-from excel_finance_tools.excel_handler import ExcelHandler
+from cash_sync.excel_handler import ExcelHandler
 import openpyxl
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import pandas as pd
@@ -256,7 +256,7 @@ class TestExcelHandlerUnit:
         handler.existing_df = mocker.Mock()
         handler.ws = mocker.Mock()
         # Patch logger to check for warning
-        mock_logger = mocker.patch("excel_finance_tools.excel_handler.logger")
+        mock_logger = mocker.patch("cash_sync.excel_handler.logger")
         # Call update_cell with a missing column
         result = handler.update_cell(0, "Category", "TestValue")
         # Should log a warning and return early

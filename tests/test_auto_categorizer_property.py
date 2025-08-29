@@ -17,8 +17,8 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from excel_finance_tools.auto_categorizer import AutoCategorizer
-from excel_finance_tools.excel_handler import ExcelHandler
+from cash_sync.auto_categorizer import AutoCategorizer
+from cash_sync.excel_handler import ExcelHandler
 
 
 class TestAutoCategorizerProperty:
@@ -33,7 +33,7 @@ class TestAutoCategorizerProperty:
         self.mock_handler.update_cell = Mock()
         
         # Create AutoCategorizer instance
-        with patch('excel_finance_tools.auto_categorizer.ExcelHandler', return_value=self.mock_handler):
+        with patch('cash_sync.auto_categorizer.ExcelHandler', return_value=self.mock_handler):
             self.categorizer = AutoCategorizer("dummy_file.xlsx")
     
     # Hypothesis strategies for property-based testing

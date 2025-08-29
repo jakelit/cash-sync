@@ -2,7 +2,7 @@
 Pytest configuration file.
 
 This file adds the project's source directory to the Python path
-so that pytest can find the `excel_finance_tools` package.
+so that pytest can find the `cash_sync` package.
 """
 import sys
 import os

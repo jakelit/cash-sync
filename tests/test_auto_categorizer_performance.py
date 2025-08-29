@@ -18,8 +18,8 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from excel_finance_tools.auto_categorizer import AutoCategorizer
-from excel_finance_tools.excel_handler import ExcelHandler
+from cash_sync.auto_categorizer import AutoCategorizer
+from cash_sync.excel_handler import ExcelHandler
 
 
 class TestAutoCategorizerPerformance:
@@ -105,7 +105,7 @@ class TestAutoCategorizerPerformance:
     @pytest.fixture
     def mock_excel_handler(self):
         """Mock ExcelHandler for performance testing."""
-        with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock:
+        with patch('cash_sync.auto_categorizer.ExcelHandler') as mock:
             handler_instance = Mock()
             handler_instance.existing_df = pd.DataFrame()
             handler_instance.existing_columns = ["Description", "Amount", "Category", "Account"]

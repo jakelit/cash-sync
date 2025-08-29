@@ -9,12 +9,12 @@ import pytest
 from unittest.mock import Mock, patch
 import pandas as pd
 
-from excel_finance_tools.auto_categorizer import AutoCategorizer
+from cash_sync.auto_categorizer import AutoCategorizer
 
 @pytest.fixture
 def mock_excel_handler():
     """Mock ExcelHandler for integration testing."""
-    with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock_handler:
+    with patch('cash_sync.auto_categorizer.ExcelHandler') as mock_handler:
         mock_instance = mock_handler.return_value
         mock_instance.excel_file = "test.xlsx"
         mock_instance.existing_columns = ['Date', 'Description', 'Amount', 'Category', 'Account', 'Tags']
@@ -194,7 +194,7 @@ class TestAutoCategorizerIntegration:
                 'Invalid Column': 'some value'
             }
         ])
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger, \
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger, \
              patch.object(mock_excel_handler, 'update_cell') as mock_update, \
              patch.object(mock_excel_handler, 'save'):
             success, message = categorizer.run_auto_categorization()
@@ -219,7 +219,7 @@ class TestAutoCategorizerIntegration:
             }
         ])
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger, \
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger, \
              patch.object(mock_excel_handler, 'update_cell') as mock_update, \
              patch.object(mock_excel_handler, 'save'):
             success, message = categorizer.run_auto_categorization()
@@ -245,7 +245,7 @@ class TestAutoCategorizerIntegration:
         # Mock empty AutoCat worksheet (empty DataFrame)
         mock_excel_handler.get_autocat_rules.return_value = pd.DataFrame()
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger, \
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger, \
              patch.object(mock_excel_handler, 'update_cell') as mock_update, \
              patch.object(mock_excel_handler, 'save'):
             success, message = categorizer.run_auto_categorization()
@@ -271,7 +271,7 @@ class TestAutoCategorizerIntegration:
         # Mock load_workbook to raise OSError (corrupted file)
         mock_excel_handler.load_workbook.side_effect = OSError("Invalid Excel file format")
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             success, message = categorizer.run_auto_categorization()
             
             # Should return False with error message
@@ -291,7 +291,7 @@ class TestAutoCategorizerIntegration:
         # Mock load_workbook to raise PermissionError
         mock_excel_handler.load_workbook.side_effect = PermissionError("Access denied")
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             success, message = categorizer.run_auto_categorization()
             
             # Should return False with error message
@@ -317,7 +317,7 @@ class TestAutoCategorizerIntegration:
             # Missing 'Category' column
         })
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             success, message = categorizer.run_auto_categorization()
             
             # Should return False with error message
@@ -337,7 +337,7 @@ class TestAutoCategorizerIntegration:
         # Mock load_workbook to raise FileNotFoundError
         mock_excel_handler.load_workbook.side_effect = FileNotFoundError("File not found")
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             success, message = categorizer.run_auto_categorization()
             
             # Should return False with error message
@@ -361,7 +361,7 @@ class TestAutoCategorizerIntegration:
         # Mock save to raise PermissionError (read-only file)
         mock_excel_handler.save.side_effect = PermissionError("File is read-only")
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             success, message = categorizer.run_auto_categorization()
             
             # Should return False with error message
@@ -381,7 +381,7 @@ class TestAutoCategorizerIntegration:
         # Mock load_workbook to raise OSError
         mock_excel_handler.load_workbook.side_effect = OSError("Disk full")
         
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             success, message = categorizer.run_auto_categorization()
             
             # Should return False with error message

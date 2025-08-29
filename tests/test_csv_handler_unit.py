@@ -1,5 +1,5 @@
 import pytest
-from excel_finance_tools.csv_handler import CSVHandler
+from cash_sync.csv_handler import CSVHandler
 import os
 import pandas as pd
 from unittest.mock import patch

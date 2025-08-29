@@ -11,7 +11,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 import tempfile
 import os
 
-from excel_finance_tools.auto_categorizer import AutoCategorizer
+from cash_sync.auto_categorizer import AutoCategorizer
 
 def create_excel_table(worksheet, data, table_name, start_row=1, start_col=1):
     """Helper function to create a proper Excel table."""

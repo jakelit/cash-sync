@@ -15,8 +15,8 @@ from unittest.mock import Mock, patch
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from excel_finance_tools.auto_categorizer import AutoCategorizer
-from excel_finance_tools.excel_handler import ExcelHandler
+from cash_sync.auto_categorizer import AutoCategorizer
+from cash_sync.excel_handler import ExcelHandler
 
 
 class TestAutoCategorizerDataIntegrity:
@@ -75,7 +75,7 @@ class TestAutoCategorizerDataIntegrity:
     @pytest.fixture
     def mock_excel_handler(self):
         """Mock ExcelHandler for data integrity testing."""
-        with patch('excel_finance_tools.auto_categorizer.ExcelHandler') as mock:
+        with patch('cash_sync.auto_categorizer.ExcelHandler') as mock:
             handler_instance = Mock()
             handler_instance.existing_df = pd.DataFrame()
             handler_instance.existing_columns = ["Description", "Amount", "Category", "Account", "Tags", "Notes"]
@@ -153,7 +153,7 @@ class TestAutoCategorizerDataIntegrity:
         mock_excel_handler.existing_columns = list(mixed_transactions_df.columns)
         
         # Mock the logger to capture log entries
-        with patch('excel_finance_tools.auto_categorizer.logger') as mock_logger:
+        with patch('cash_sync.auto_categorizer.logger') as mock_logger:
             with patch('pandas.read_excel') as mock_read:
                 mock_read.return_value = valid_rules_df
                 mock_excel_handler.get_autocat_rules.return_value = valid_rules_df

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
-from excel_finance_tools.base_importer import BaseImporter
+from cash_sync.base_importer import BaseImporter
 
 class DummyImporter(BaseImporter):
     def get_expected_columns(self):

@@ -1,5 +1,5 @@
 import pytest
-from excel_finance_tools import AllyImporter, CapitalOneImporter
+from cash_sync import AllyImporter, CapitalOneImporter
 
 def test_ally_importer_initialization():
     importer = AllyImporter()
