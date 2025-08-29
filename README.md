@@ -86,15 +86,26 @@ pip install -r requirements-dev.txt
 
 ### Running Tests and Checks
 
+**⚠️ IMPORTANT: Always use the virtual environment for Python commands!**
+
 Run all tests and code quality checks:
 ```bash
+# Using the enhanced check.py script (recommended)
 python check.py
+
+# Or run all checks using the virtual environment directly
+.venv\Scripts\python.exe check.py
 ```
 
 Or run individual checks:
 ```bash
-pytest tests/          # Run tests
-pylint src/           # Run code quality checks
+# Using the enhanced check.py script
+python check.py test          # Run tests only
+python check.py lint          # Run pylint only
+
+# Or use the virtual environment directly
+.venv\Scripts\python.exe -m pytest tests/          # Run tests
+.venv\Scripts\python.exe -m pylint src/           # Run code quality checks
 ```
 
 ### Requirements Files
