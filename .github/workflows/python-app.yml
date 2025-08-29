@@ -24,18 +24,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
-    - name: Verify imports
+    - name: Run tests and checks
       run: |
-        python -c "import sys; sys.path.insert(0, 'src'); from cash_sync import ExcelHandler, BaseImporter; print('Imports successful')"
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
-      run: |
-        pytest --cov=src --cov-report=xml
+        # In CI, we don't have a virtual environment, so we run check.py directly
+        # but it will use the system Python which has all dependencies installed
+        python check.py all
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
