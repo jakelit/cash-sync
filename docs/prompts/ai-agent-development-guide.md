@@ -13,10 +13,12 @@ You are an AI development agent working on the Cash Sync project. Follow these i
 ## 🎯 Core Principles
 
 ### Test-Driven Development Workflow
-1. **Write failing tests first** - Define expected behavior through tests
-2. **Write minimal code** - Implement just enough to make tests pass
-3. **Refactor** - Improve code quality while keeping tests green
-4. **Human review** - Get approval before proceeding to next iteration
+1. **Write ONE failing test first** - Define expected behavior through a single test
+2. **Write minimal code** - Implement just enough to make that ONE test pass
+3. **Verify test passes** - Run the test to confirm it's green
+4. **Refactor if needed** - Improve code quality while keeping test green
+5. **Human review** - Get approval before proceeding to next test
+6. **Repeat** - Move to the next test case and repeat the cycle
 
 ### Tight Feedback Loop
 - **Small, incremental changes** - Never write large amounts of code without review
@@ -166,9 +168,9 @@ You MUST gather this information:
    - Session context reviewed and documented
    - Reference materials gathered
    - Communication protocol established
-   - Ready to begin development workflow
-   
-   Should I proceed with test implementation?
+   - Ready to begin TDD workflow
+
+Should I proceed with the first test implementation?
    ```
 
 ### Phase 1: Test Implementation
@@ -491,6 +493,13 @@ You MUST gather this information:
 - **Human intervention** - Clear criteria for when to take over manually
 
 ## 🚨 Pitfalls You MUST Avoid
+
+### TDD-Specific Pitfalls
+- ❌ **Writing all tests at once** - You MUST write ONE test, then minimal code, then next test
+- ❌ **Implementing all production code after all tests** - You MUST implement minimal code after EACH test
+- ❌ **Skipping the red phase** - You MUST verify each test fails before writing production code
+- ❌ **Large test implementations** - You MUST implement tests one at a time with human review
+- ❌ **Ignoring TDD cycle** - You MUST follow: Red → Green → Refactor → Repeat for EACH test
 
 ### Testing Pitfalls
 - ❌ **Writing tests after code** - You MUST write tests first

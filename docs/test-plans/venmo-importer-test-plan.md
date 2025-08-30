@@ -97,12 +97,12 @@ Tests are organized into module-specific files for maintainability and selective
 - `tests/test_venmo_importer_security.py` - Security tests (SEC001-SEC005)
 
 ### Test Counts by File
-- VenmoImporter unit tests: 20 test cases (UT001-UT020)
+- VenmoImporter unit tests: 23 test cases (UT001-UT023)
 - Integration tests: 10 test cases (IT001-IT010)
 - Performance tests: 5 test cases (PERF001-PERF005)
 - Property-based tests: 5 test cases (PROP001-PROP005)
 - Security tests: 5 test cases (SEC001-SEC005)
-- **Total: 45 test cases**
+- **Total: 48 test cases**
 
 ### Test Case Numbering Convention
 - **UT###**: Unit Tests (UT001, UT002, UT003...)
@@ -155,7 +155,10 @@ pytest -k "PERF001" tests/test_venmo_importer_performance.py
 | UT017 | Unit | `transform_transactions()` | From/To mapping | Transaction with From/To | Correct description logic | High | Venmo-specific |
 | UT018 | Unit | `transform_transactions()` | Special characters | Emojis in notes | Handles Unicode correctly | Medium | Edge case |
 | UT019 | Unit | `transform_transactions()` | Empty fields | Missing From/To fields | Handles gracefully | Medium | Edge case |
-| UT020 | Unit | `transform_transactions()` | Footer disclaimer | CSV with footer text | Skips footer correctly | Medium | Venmo-specific |
+| UT020 | Unit | `transform_transactions()` | Multi-line disclaimer | CSV with multi-line disclaimer in last row | Handles multi-line disclaimer correctly | Medium | Venmo-specific |
+| UT021 | Unit | `read_csv_data()` | Balance row filtering | CSV with beginning/ending balance rows | Filters out balance rows correctly | High | Venmo-specific |
+| UT022 | Unit | `read_csv_data()` | Multi-line CSV parsing | CSV with quoted multi-line values | Parses multi-line cells correctly | High | Venmo-specific |
+| UT023 | Unit | `read_csv_data()` | Transaction ID validation | CSV with invalid/missing IDs | Only processes rows with valid IDs | High | Venmo-specific |
 | IT001 | Integration | CSV file reading | Valid Venmo CSV | Standard Venmo export | Successfully reads format | High | Integration |
 | IT002 | Integration | Data transformation | Complete pipeline | Sample Venmo CSV | All fields transformed | High | End-to-end |
 | IT003 | Integration | Duplicate detection | Venmo transactions | Same file imported twice | Duplicates filtered | High | Integration |
@@ -201,6 +204,12 @@ pytest -k "PERF001" tests/test_venmo_importer_performance.py
   - Payment from friend
   - Charge
   - Standard Transfer
+- **Balance Rows (to be filtered out):**
+  - Beginning balance row: `,,,,,,,,,,,,,,,,"$1,250.00",,,,,`
+  - Ending balance row: `,,,,,,,,,,,,,,,,$1,407.50,$0.00,,$0.00,"Multi-line disclaimer text..."`
+- **Multi-line Disclaimer Content:**
+  - Quoted multi-line legal text within "Disclaimer" column
+  - Contains newlines, contact information, and legal terms
 
 ### Invalid Input Examples
 - **Malformed Headers:**
@@ -320,7 +329,7 @@ pytest -m "security" tests/test_venmo_importer*.py
 ## Deliverables
 
 - [ ] Complete test implementation:
-  - [ ] `tests/test_venmo_importer_unit.py` (20 unit tests)
+  - [ ] `tests/test_venmo_importer_unit.py` (23 unit tests)
   - [ ] `tests/test_venmo_importer_integration.py` (10 integration tests)
   - [ ] `tests/test_venmo_importer_performance.py` (5 performance tests)
   - [ ] `tests/test_venmo_importer_property.py` (5 property tests)

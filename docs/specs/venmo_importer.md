@@ -11,16 +11,19 @@ Venmo exports transaction data in CSV format with a specific structure that incl
 **File Structure:**
 - **Line 1**: Account Statement header with username (e.g., "Account Statement - (@username)")
 - **Line 2**: "Account Activity" section header
-- **Line 3**: The first column is blank, followed by the column headers (actual transaction data starts from line 4)
-- **Line 4+**: Transaction data rows
-- **Last lines**: Summary information and legal disclaimer
+- **Line 3**: Column headers (first column is blank, followed by actual column headers)
+- **Line 4**: Beginning Balance row (only contains value in "Beginning Balance" column)
+- **Line 5+**: Transaction data rows (actual transaction records)
+- **Last line**: Ending Balance row with legal disclaimer (contains values in "Ending Balance", "Statement Period Venmo Fees", and "Disclaimer" columns, where the Disclaimer column contains multi-line legal text)
 
 **Important Format Notes:**
 - The first column is empty/blank (no header)
 - Column headers are on the 3rd line, not the 1st line
-- Transaction data starts from the 4th line
-- The file includes summary rows with balance information
-- A lengthy legal disclaimer appears at the end
+- Line 4 contains only the beginning balance (no transaction data)
+- Transaction data starts from line 5
+- The last line contains ending balance, fees, and legal disclaimer (no transaction data)
+- The legal disclaimer is a multi-line value within the "Disclaimer" column of the last row
+- Only rows with valid transaction IDs should be processed as transactions
 
 **Transaction Columns (starting from 2nd column):**
 - `ID` - Unique transaction identifier (e.g., "4345080794249066591")
@@ -90,11 +93,13 @@ Account Activity,,,,,,,,,,,,,,,,,,,,,
 
 **Key Features of the Example:**
 - Shows the header structure with username extraction (`@user123`)
-- Demonstrates various transaction types and amounts
+- Line 4 contains only the beginning balance (`$1,250.00`)
+- Demonstrates various transaction types and amounts (lines 5-9)
 - Includes emojis in notes (🍕 🍷, ☕, 🎵 🎫, 🥕 🍎, 🚗 🏨)
 - Shows both sent (negative amounts) and received (positive amounts) transactions
 - Includes the blank first column structure
-- Shows the footer with balance summary and legal disclaimer
+- Last line contains ending balance (`$1,407.50`), fees (`$0.00`), and multi-line legal disclaimer
+- The legal disclaimer spans multiple lines within a single CSV cell (quoted value)
 
 ### Data Mapping Requirements
 The importer must map Venmo-specific fields to the standardized Excel format:
@@ -117,11 +122,46 @@ The importer must implement the following methods:
 - `get_expected_columns()` - Return the expected Venmo CSV columns as defined in the data mapping table above
 - `get_institution_name()` - Return "Venmo"
 - `get_account_name()` - Extract username from line 1 CSV header (e.g., "Account Statement - (@username)") and return as account name
+- `read_csv_data()` - Override base method to handle Venmo's unconventional CSV format with multi-line headers and blank first column
 - `parse_transaction_date()` - Override base method to handle ISO datetime format (e.g., "2025-06-01T01:39:54")
 - `parse_transaction_amount()` - Parse currency format (e.g., "- $50.00", "+ $25.00") to numeric, preserve sign. Negative = money sent (debit), positive = money received (credit)
 
 ### Column Mapping Configuration
 In the constructor of `VenmoImporter`, use the `set_column_mapping` method (inherited from `BaseImporter`) to map Venmo's CSV column names to the standardized internal column names. For example:
+
+### CSV Reading Implementation
+The `VenmoImporter` must override the `read_csv_data()` method to handle Venmo's unconventional CSV format:
+
+**Key Implementation Requirements:**
+1. **Header Processing**: Read the first line to extract username from "Account Statement - (@username)" format
+2. **Data Section Identification**: Skip lines 1-3 (header and "Account Activity" section) to find the actual column headers
+3. **Blank Column Handling**: Remove the blank first column that appears in all Venmo CSV files
+4. **Balance Row Filtering**: Skip line 4 (beginning balance row) and last line (ending balance/fees/disclaimer row)
+5. **Transaction Validation**: Ensure only rows with valid transaction IDs are included as transactions
+6. **Multi-line Handling**: Handle the multi-line legal disclaimer within the last row's "Disclaimer" column
+
+**Implementation Steps:**
+1. Read the file line by line to extract account name from line 1
+2. Find the "Account Activity" section to locate the start of column headers
+3. Use `pandas.read_csv()` with `skiprows` parameter to start from line 3 (column headers)
+4. Remove the blank first column using DataFrame slicing
+5. Filter out balance rows (line 4 and last line) that don't contain transaction data
+6. Filter out rows without valid transaction IDs (empty or non-numeric ID values)
+7. Handle multi-line legal disclaimer within the last row's "Disclaimer" column
+8. Return a clean DataFrame with only transaction data
+
+**Example Implementation Structure:**
+```python
+def read_csv_data(self, csv_file: str) -> pd.DataFrame:
+    # Read file line by line to extract account name from line 1
+    # Find "Account Activity" section to locate column headers
+    # Read CSV with skiprows=2 to start from line 3 (column headers)
+    # Remove blank first column using DataFrame slicing
+    # Filter out balance rows (line 4 and last line)
+    # Filter out rows without valid transaction IDs
+    # Handle multi-line legal disclaimer in last row's "Disclaimer" column
+    # Return clean DataFrame with only transaction data
+```
 
 ## Integration Requirements
 
@@ -143,8 +183,13 @@ Add import statement in the main package initialization.
 - Handle empty or null values gracefully
 - Skip header rows (lines 1-3) and footer disclaimer text
 - Handle the blank first column in all data rows
-- Validate that transaction data starts from line 4
+- Validate that transaction data starts from line 5 (after beginning balance row)
+- Filter out balance rows (line 4 and last line) that don't contain transaction data
+- Validate that only rows with valid transaction IDs are processed as transactions
 - Parse username from header line (e.g., "Account Statement - (@username)") for account identification
+- Handle file reading errors in the `read_csv_data()` method
+- Validate CSV structure before attempting to parse transaction data
+- Handle multi-line values within CSV cells (legal disclaimer in "Disclaimer" column)
 
 ### Data Quality Checks
 - Verify transaction dates are within reasonable range
@@ -159,6 +204,12 @@ Provide clear error messages for:
 - Non-currency format amount values
 - File access issues
 - Header/footer parsing issues
+- Invalid CSV structure (missing "Account Activity" section)
+- Malformed header line (missing username extraction)
+- File encoding issues during CSV reading
+- Missing or invalid transaction data (no valid transaction rows found)
+- Balance row parsing issues (beginning/ending balance rows not found)
+- Multi-line CSV parsing issues (legal disclaimer handling)
 
 ## Testing
 See the dedicated [Venmo Importer Test Plan](../test-plans/venmo-importer-test-plan.md) for comprehensive testing requirements, test cases, and validation criteria.
@@ -208,6 +259,8 @@ Update `docs/import_transactions.md` to include:
 - Enhanced transaction categorization for Venmo patterns
 - Support for Venmo business accounts
 - Integration with Venmo's transaction categories
+- **Balance Tracking**: Extract and store beginning/ending balances from balance rows for account reconciliation
+- **Fee Analysis**: Parse and track Venmo fees from the ending balance row
 
 ### Scalability
 - Support for batch processing multiple Venmo files
@@ -218,9 +271,10 @@ Update `docs/import_transactions.md` to include:
 
 ### Phase 1: Core Implementation
 1. Create `VenmoImporter` class with basic functionality
-2. Implement column mapping and data parsing
-3. Add to GUI and CLI interfaces
-4. Basic unit tests
+2. Implement `read_csv_data()` method to handle Venmo's unconventional CSV format
+3. Implement column mapping and data parsing
+4. Add to GUI and CLI interfaces
+5. Basic unit tests
 
 ### Phase 2: Testing and Refinement
 1. Comprehensive test suite

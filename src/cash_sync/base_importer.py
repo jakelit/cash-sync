@@ -113,6 +113,39 @@ class BaseImporter(ABC):
         """
         raise NotImplementedError  # pragma: no cover
 
+    def read_csv_data(self, csv_file: str) -> pd.DataFrame:
+        """
+        Read and parse CSV file data into a pandas DataFrame.
+        
+        This method provides a default implementation for standard CSV files using the
+        CSVHandler. Subclasses can override this method to handle unconventional CSV
+        formats (like Venmo's multi-line header structure).
+        
+        The default implementation:
+        1. Creates a CSVHandler instance
+        2. Validates the file exists and has correct extension
+        3. Reads the CSV using pandas with multiple encoding attempts
+        4. Returns the parsed DataFrame
+        
+        Args:
+            csv_file (str): Path to the CSV file to read
+        
+        Returns:
+            pd.DataFrame: The parsed CSV data as a pandas DataFrame
+        
+        Raises:
+            FileNotFoundError: If the CSV file doesn't exist
+            ValueError: If the file isn't a CSV or can't be parsed
+            Various other exceptions: For CSV parsing errors, encoding issues, etc.
+        
+        Example:
+            >>> df = read_csv_data("transactions.csv")  # Standard CSV
+            >>> df = read_csv_data("venmo_export.csv")  # Overridden for Venmo format
+        """
+        csv_handler = CSVHandler(csv_file)
+        csv_handler.validate_file()
+        return csv_handler.read_csv()
+
     @abstractmethod
     def parse_transaction_amount(self, amount_str, transaction_type=None):
         """
@@ -532,6 +565,34 @@ class BaseImporter(ABC):
         
         return transformed_transactions
 
+    def validate_columns(self, df: pd.DataFrame, expected_columns: List[str]) -> None:
+        """
+        Validate that all expected columns are present in the CSV DataFrame.
+        
+        This method checks that the DataFrame contains all the required columns
+        specified by the bank-specific importer. If any columns are missing,
+        it provides a detailed error message with suggestions.
+        
+        Args:
+            df (pd.DataFrame): The parsed CSV data
+            expected_columns (List[str]): List of column names that must be present
+            
+        Raises:
+            ValueError: If any required columns are missing from the DataFrame
+        """
+        missing_columns = set(expected_columns) - set(df.columns)
+        
+        if missing_columns:
+            available_cols = list(df.columns)
+            suggestion_msg = f"\nAvailable columns in your CSV: {available_cols}"
+            error_msg = f"Your CSV file is missing some required columns: {missing_columns}.{suggestion_msg}\n\n"
+            error_msg += "This usually means either:\n"
+            error_msg += "1. The CSV file is from a different bank than selected\n"
+            error_msg += "2. The CSV file format has changed\n"
+            error_msg += "3. The CSV file was exported incorrectly\n\n"
+            error_msg += "Please check that you selected the correct bank and that the CSV file is properly exported."
+            raise ValueError(error_msg)
+
     def import_transactions(self, csv_file: str, excel_file: str) -> Tuple[bool, str]:
         """
         Main import function that processes a CSV file and adds transactions to an Excel file.
@@ -571,16 +632,14 @@ class BaseImporter(ABC):
         """
         try:
             # Initialize handlers
-            csv_handler = CSVHandler(csv_file)
             excel_handler = ExcelHandler(excel_file)
             
-            # Validate files
-            csv_handler.validate_file()
-            
-            # Read and validate CSV
+            # Read and validate CSV using template method
             logger.info("Reading CSV file: %s", csv_file)
-            df = csv_handler.read_csv()
-            csv_handler.validate_columns(self.get_expected_columns())
+            df = self.read_csv_data(csv_file)
+            
+            # Validate columns using the new validate_columns method
+            self.validate_columns(df, self.get_expected_columns())
             logger.info("Found %d transactions in CSV", len(df))
             
             # Load Excel file

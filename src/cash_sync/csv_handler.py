@@ -47,18 +47,4 @@ class CSVHandler:
         except (ValueError, OSError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:            
             raise ValueError(f"Error reading CSV file: {str(e)}") from e
     
-    def validate_columns(self, expected_columns: List[str]) -> None:
-        """Validate that all expected columns are present in the CSV."""
-        df = self.read_csv()
-        missing_columns = set(expected_columns) - set(df.columns)
-        
-        if missing_columns:
-            available_cols = list(df.columns)
-            suggestion_msg = f"\nAvailable columns in your CSV: {available_cols}"
-            error_msg = f"Your CSV file is missing some required columns: {missing_columns}.{suggestion_msg}\n\n"
-            error_msg += "This usually means either:\n"
-            error_msg += "1. The CSV file is from a different bank than selected\n"
-            error_msg += "2. The CSV file format has changed\n"
-            error_msg += "3. The CSV file was exported incorrectly\n\n"
-            error_msg += "Please check that you selected the correct bank and that the CSV file is properly exported."
-            raise ValueError(error_msg) 
+ 

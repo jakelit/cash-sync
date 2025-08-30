@@ -39,23 +39,7 @@ class TestCSVHandlerUnit:
             handler.read_csv()
         assert "Error reading CSV file" in str(excinfo.value)
 
-    @pytest.mark.unit
-    def test_validate_columns_valid(self, tmp_path):
-        """UT034: Valid column set - Should not raise exception for expected columns."""
-        csv_file = tmp_path / "valid.csv"
-        csv_file.write_text("Date,Amount,Description\n2024-01-01,10.00,Test")
-        handler = CSVHandler(str(csv_file))
-        handler.read_csv()  # Load the DataFrame
-        handler.validate_columns(["Date", "Amount", "Description"])
 
-    @pytest.mark.unit
-    def test_validate_columns_missing_required(self):
-        """UT035: Missing required columns - Should raise ValueError if required columns are missing."""
-        handler = CSVHandler("dummy.csv")
-        handler.df = None
-        handler.columns = ["Date", "Description"]
-        with pytest.raises(ValueError):
-            handler.validate_columns(["Date", "Amount", "Description"])
 
     @pytest.mark.unit
     def test_validate_file_valid(self, tmp_path):
@@ -104,16 +88,4 @@ class TestCSVHandlerUnit:
             with pytest.raises(ValueError):
                 handler.read_csv()
 
-    @pytest.mark.unit
-    def test_validate_columns_error_message_content(self, tmp_path):
-        """UT066: Error message includes available columns and suggestions when required columns are missing."""
-        csv_file = tmp_path / "missing_amount.csv"
-        csv_file.write_text("Date,Description\n2024-01-01,Test")
-        handler = CSVHandler(str(csv_file))
-        handler.read_csv()  # Load the DataFrame
-        with pytest.raises(ValueError) as excinfo:
-            handler.validate_columns(["Date", "Amount", "Description"])
-        msg = str(excinfo.value)
-        assert "Available columns in your CSV" in msg
-        assert "missing some required columns" in msg
-        assert "Please check that you selected the correct bank" in msg
+

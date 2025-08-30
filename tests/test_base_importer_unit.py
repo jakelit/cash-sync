@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
+import pandas as pd
 from cash_sync.base_importer import BaseImporter
 
 class DummyImporter(BaseImporter):
@@ -298,3 +299,34 @@ class TestBaseImporterUnit:
         assert empty_date_transaction['Year'] == ''
         assert empty_date_transaction['Month'] == ''
         assert empty_date_transaction['Week'] == ''
+
+    @pytest.mark.unit
+    def test_validate_columns_valid(self, tmp_path):
+        """UT034: Valid column set - Should not raise exception for expected columns."""
+        importer = DummyImporter()
+        # Create a DataFrame with all required columns
+        df = pd.DataFrame({"Date": ["2024-01-01"], "Amount": ["10.00"], "Description": ["Test"]})
+        # Should not raise an exception
+        importer.validate_columns(df, ["Date", "Amount", "Description"])
+
+    @pytest.mark.unit
+    def test_validate_columns_missing_required(self):
+        """UT035: Missing required columns - Should raise ValueError if required columns are missing."""
+        importer = DummyImporter()
+        # Create a DataFrame with missing columns
+        df = pd.DataFrame({"Date": ["2024-01-01"], "Description": ["Test"]})
+        with pytest.raises(ValueError):
+            importer.validate_columns(df, ["Date", "Amount", "Description"])
+
+    @pytest.mark.unit
+    def test_validate_columns_error_message_content(self):
+        """UT066: Error message includes available columns and suggestions when required columns are missing."""
+        importer = DummyImporter()
+        # Create a DataFrame with missing columns
+        df = pd.DataFrame({"Date": ["2024-01-01"], "Description": ["Test"]})
+        with pytest.raises(ValueError) as excinfo:
+            importer.validate_columns(df, ["Date", "Amount", "Description"])
+        msg = str(excinfo.value)
+        assert "Available columns in your CSV" in msg
+        assert "missing some required columns" in msg
+        assert "Please check that you selected the correct bank" in msg
