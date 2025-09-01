@@ -2,7 +2,6 @@
 This module provides the CSVHandler class for reading and validating CSV files.
 """
 import os
-from typing import List
 import pandas as pd
 
 class CSVHandler:

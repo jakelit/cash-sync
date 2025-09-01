@@ -35,7 +35,7 @@ class BaseImporter(ABC):
         self.excel_file = None
         
         # Default column mappings for common fields
-        self.column_mappings = {
+        self._column_mappings = {
             'Date': 'Date',
             'Description': 'Description',
             'Amount': 'Amount',
@@ -45,14 +45,14 @@ class BaseImporter(ABC):
         }
         
         # Default values for required fields
-        self.default_values = {
+        self._default_values = {
             'Account Number': '',
             'Transaction Type': '',
             'Balance': 0.0
         }
     
     @abstractmethod
-    def get_expected_columns(self):
+    def _get_expected_columns(self):
         """
         Return the list of required column names that must be present in the CSV file.
         
@@ -70,7 +70,7 @@ class BaseImporter(ABC):
         raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
-    def get_institution_name(self):
+    def _get_institution_name(self):
         """
         Return the human-readable name of the financial institution.
 
@@ -89,7 +89,7 @@ class BaseImporter(ABC):
         raise NotImplementedError  # pragma: no cover
     
     @abstractmethod
-    def get_account_name(self):
+    def _get_account_name(self):
         """
         Return the account name or identifier for this specific account.
 
@@ -113,7 +113,132 @@ class BaseImporter(ABC):
         """
         raise NotImplementedError  # pragma: no cover
 
-    def read_csv_data(self, csv_file: str) -> pd.DataFrame:
+    def _get_description(self, row: Dict[str, Any]) -> str:
+        """
+        Return the description for a transaction based on the CSV row data.
+        
+        This method allows bank-specific logic for determining transaction descriptions.
+        Different banks may have different ways of representing transaction descriptions
+        or may need to combine multiple fields to create a meaningful description.
+        
+        Args:
+            row (Dict[str, Any]): A dictionary representing a single row from the CSV file,
+                                 where keys are column names and values are the cell values
+        
+        Returns:
+            str: The description for this transaction that will appear in the "Description" column
+            
+        Example:
+            >>> # For standard banks, just return the Description column
+            >>> return str(row.get('Description', ''))
+            >>> # For Venmo, combine From/To fields based on transaction direction
+            >>> amount = self.parse_transaction_amount(str(row.get('Amount (total)', '')))
+            >>> if amount < 0:
+            >>>     return str(row.get('To', ''))  # Money sent to someone
+            >>> else:
+            >>>     return str(row.get('From', ''))  # Money received from someone
+        """
+        return str(row.get('Description', ''))
+
+    def _get_account_number(self, row: Dict[str, Any]) -> str:
+        """
+        Return the account number for a transaction based on the CSV row data.
+        
+        This method allows bank-specific logic for determining account numbers.
+        Different banks may store account numbers in different columns or formats.
+        
+        Args:
+            row (Dict[str, Any]): A dictionary representing a single row from the CSV file,
+                                 where keys are column names and values are the cell values
+        
+        Returns:
+            str: The account number for this transaction that will appear in the "Account #" column
+            
+        Example:
+            >>> # For standard banks, return the Account Number column
+            >>> return str(row.get('Account Number', ''))
+            >>> # For banks with different column names
+            >>> return str(row.get('Account ID', ''))
+        """
+        return str(row.get('Account Number', ''))
+
+    def _get_check_number(self, row: Dict[str, Any]) -> str:
+        """
+        Return the check number for a transaction based on the CSV row data.
+        
+        This method allows bank-specific logic for determining check numbers.
+        Most transactions won't have check numbers, but some banks may provide this information.
+        
+        Args:
+            row (Dict[str, Any]): A dictionary representing a single row from the CSV file,
+                                 where keys are column names and values are the cell values
+        
+        Returns:
+            str: The check number for this transaction that will appear in the "Check Number" column,
+                 or an empty string if not applicable
+            
+        Example:
+            >>> # For standard banks, return empty string (not applicable)
+            >>> return ''
+            >>> # For banks that provide check numbers
+            >>> return str(row.get('Check Number', ''))
+        """
+        return str(row.get('Check Number', '')) if 'Check Number' in row else ''
+
+    def _get_full_description(self, row: Dict[str, Any]) -> str:
+        """
+        Return the full description for a transaction based on the CSV row data.
+        
+        This method allows bank-specific logic for determining full descriptions.
+        The full description typically contains more detailed information than the basic description,
+        such as merchant details, transaction notes, or additional context.
+        
+        Args:
+            row (Dict[str, Any]): A dictionary representing a single row from the CSV file,
+                                 where keys are column names and values are the cell values
+        
+        Returns:
+            str: The full description for this transaction that will appear in the "Full Description" column
+            
+        Example:
+            >>> # For standard banks, return the Description column (same as basic description)
+            >>> return str(row.get('Description', ''))
+            >>> # For banks with separate full description fields
+            >>> return str(row.get('Full Description', ''))
+            >>> # For banks with multiple fields to combine
+            >>> desc = str(row.get('Description', ''))
+            >>> notes = str(row.get('Notes', ''))
+            >>> return f"{desc} - {notes}".strip(' -') if notes else desc
+        """
+        return str(row.get('Description', ''))
+
+    def _get_transaction_type(self, row: Dict[str, Any]) -> str:
+        """
+        Return the transaction type for a transaction based on the CSV row data.
+        
+        This method allows bank-specific logic for determining transaction types.
+        Different banks may use different terminology or store this information in different columns.
+        
+        Args:
+            row (Dict[str, Any]): A dictionary representing a single row from the CSV file,
+                                 where keys are column names and values are the cell values
+        
+        Returns:
+            str: The transaction type for this transaction, used for amount parsing logic
+            
+        Example:
+            >>> # For standard banks, return the Transaction Type column
+            >>> return str(row.get('Transaction Type', ''))
+            >>> # For banks with different column names
+            >>> return str(row.get('Type', ''))
+            >>> # For banks that infer type from other fields
+            >>> if 'debit' in str(row.get('Description', '')).lower():
+            >>>     return 'debit'
+            >>> return 'credit'
+        """
+        return str(row.get('Transaction Type', '')).lower().strip()
+
+    def _read_csv_data(self, csv_file: str) -> pd.DataFrame:
         """
         Read and parse CSV file data into a pandas DataFrame.
         
@@ -146,7 +271,7 @@ class BaseImporter(ABC):
         csv_handler.validate_file()
         return csv_handler.read_csv()
 
-    def parse_transaction_amount(self, amount_str, transaction_type=None):
+    def _parse_transaction_amount(self, amount_str, transaction_type=None):
         """
         Parse a transaction amount string and determine if it's a debit or credit.
         
@@ -227,7 +352,7 @@ class BaseImporter(ABC):
         except (ValueError, TypeError):
             return 0.0
 
-    def set_column_mapping(self, source_column: str, target_column: str):
+    def _set_column_mapping(self, source_column: str, target_column: str):
         """
         Set a custom column mapping for this bank's CSV format.
         
@@ -243,9 +368,9 @@ class BaseImporter(ABC):
             >>> set_column_mapping("Transaction Date", "Date")
             >>> set_column_mapping("Transaction Description", "Description")
         """
-        self.column_mappings[target_column] = source_column
+        self._column_mappings[target_column] = source_column
     
-    def set_default_value(self, column: str, value: Any):
+    def _set_default_value(self, column: str, value: Any):
         """
         Set a default value for a column if it's missing in the CSV file.
         
@@ -273,9 +398,9 @@ class BaseImporter(ABC):
             >>> set_default_value("Transaction Type", "Transfer")
             >>> set_default_value("Category", "Uncategorized")
         """
-        self.default_values[column] = value
+        self._default_values[column] = value
     
-    def get_column_value(self, row: Dict[str, Any], column_name: str) -> str:
+    def _get_column_value(self, row: Dict[str, Any], column_name: str) -> str:
         """
         Get a column value from a CSV row, using mapping and default values if needed.
         
@@ -300,20 +425,20 @@ class BaseImporter(ABC):
             >>> get_column_value(row, "Account Number")  # Returns default value or ""
         """
         # Get the mapped column name
-        mapped_column = self.column_mappings.get(column_name)
+        mapped_column = self._column_mappings.get(column_name)
         
         # If we have a mapping and the column exists in the row, use it
         if mapped_column and mapped_column in row:
             return row[mapped_column]
         
         # If we have a default value, use it
-        if column_name in self.default_values:
-            return self.default_values[column_name]
+        if column_name in self._default_values:
+            return self._default_values[column_name]
         
         # If no mapping or default, return empty string
         return ''
     
-    def parse_transaction_date(self, date_str):
+    def _parse_transaction_date(self, date_str):
         """
         Parse a transaction date string into a datetime.date object.
         
@@ -359,7 +484,7 @@ class BaseImporter(ABC):
             logger.warning("Date parsing error for '%s': %s. Date field will be left empty for manual correction.", date_str, date_error)
             return None
 
-    def validate_files(self, csv_file, excel_file):
+    def _validate_files(self, csv_file, excel_file):
         """
         Validate that input files exist and are accessible.
         
@@ -392,7 +517,7 @@ class BaseImporter(ABC):
         if not excel_file.lower().endswith(('.xlsx', '.xls')):
             raise ValueError("Second file must be an Excel file")
     
-    def get_week_start(self, date):
+    def _get_week_start(self, date):
         """
         Get the first day of the week (Sunday) for a given date.
         
@@ -415,7 +540,7 @@ class BaseImporter(ABC):
         week_start = date - timedelta(days=days_since_sunday)
         return week_start
     
-    def format_date_mdy(self, date_obj):
+    def _format_date_mdy(self, date_obj):
         """
         Format a date object as M/D/YYYY string (without leading zeros).
         
@@ -449,7 +574,7 @@ class BaseImporter(ABC):
         year = date_obj.year
         return f"{month}/{day}/{year}"
     
-    def clean_description(self, description):
+    def _clean_description(self, description):
         """
         Clean and format transaction description to be more human readable.
         
@@ -535,7 +660,7 @@ class BaseImporter(ABC):
         
         return cleaned
 
-    def transform_transactions(self, df: pd.DataFrame, existing_columns: List[str]) -> List[Dict[str, Any]]:
+    def _transform_transactions(self, df: pd.DataFrame, existing_columns: List[str]) -> List[Dict[str, Any]]:
         """
         Transform bank transactions from CSV format to standardized Excel format.
         
@@ -566,12 +691,12 @@ class BaseImporter(ABC):
         for index, row in df.iterrows():
             try:
                 # Parse transaction date
-                trans_date = self.parse_transaction_date(str(self.get_column_value(row, 'Date')).strip())
+                trans_date = self._parse_transaction_date(str(self._get_column_value(row, 'Date')).strip())
                 
                 # Parse transaction amount
-                amount = self.parse_transaction_amount(
-                    str(self.get_column_value(row, 'Amount')),
-                    str(self.get_column_value(row, 'Transaction Type')).lower().strip()
+                amount = self._parse_transaction_amount(
+                    str(self._get_column_value(row, 'Amount')),
+                    self._get_transaction_type(row)
                 )
                 
                 if trans_date is None:
@@ -582,23 +707,23 @@ class BaseImporter(ABC):
                     # Calculate date-related fields
                     year_start = datetime(trans_date.year, 1, 1)
                     month_start = datetime(trans_date.year, trans_date.month, 1)
-                    week_start = self.get_week_start(trans_date)
+                    week_start = self._get_week_start(trans_date)
                 
                 # Create transaction mapping
                 transaction = {
-                    'Date': self.format_date_mdy(trans_date),
-                    'Description': self.clean_description(self.get_column_value(row, 'Description')),
+                    'Date': self._format_date_mdy(trans_date),
+                    'Description': self._clean_description(self._get_description(row)),
                     'Category': '',  # Will be empty for user to categorize
                     'Amount': amount,
-                    'Account': self.get_account_name(),
-                    'Account #': str(self.get_column_value(row, 'Account Number')),
-                    'Institution': self.get_institution_name(),
-                    'Year': self.format_date_mdy(year_start),
-                    'Month': self.format_date_mdy(month_start),
-                    'Week': self.format_date_mdy(week_start),
-                    'Check Number': '',  # Not applicable for most transactions
-                    'Full Description': str(self.get_column_value(row, 'Description')),
-                    'Date Added': self.format_date_mdy(datetime.now())
+                    'Account': self._get_account_name(),
+                    'Account #': self._get_account_number(row),
+                    'Institution': self._get_institution_name(),
+                    'Year': self._format_date_mdy(year_start),
+                    'Month': self._format_date_mdy(month_start),
+                    'Week': self._format_date_mdy(week_start),
+                    'Check Number': self._get_check_number(row),
+                    'Full Description': self._get_full_description(row),
+                    'Date Added': self._format_date_mdy(datetime.now())
                 }
                 
                 # Filter to only include columns that exist in the Excel file
@@ -617,7 +742,7 @@ class BaseImporter(ABC):
         
         return transformed_transactions
 
-    def validate_columns(self, df: pd.DataFrame, expected_columns: List[str]) -> None:
+    def _validate_columns(self, df: pd.DataFrame, expected_columns: List[str]) -> None:
         """
         Validate that all expected columns are present in the CSV DataFrame.
         
@@ -688,10 +813,10 @@ class BaseImporter(ABC):
             
             # Read and validate CSV using template method
             logger.info("Reading CSV file: %s", csv_file)
-            df = self.read_csv_data(csv_file)
+            df = self._read_csv_data(csv_file)
             
             # Validate columns using the new validate_columns method
-            self.validate_columns(df, self.get_expected_columns())
+            self._validate_columns(df, self._get_expected_columns())
             logger.info("Found %d transactions in CSV", len(df))
             
             # Load Excel file
@@ -701,7 +826,7 @@ class BaseImporter(ABC):
             
             # Transform transactions
             logger.info("Transforming transactions...")
-            transactions = self.transform_transactions(df, existing_columns)
+            transactions = self._transform_transactions(df, existing_columns)
             
             # Update Excel file
             logger.info("Updating Excel file: %s", excel_file)            

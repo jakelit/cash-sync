@@ -20,14 +20,14 @@ class CapitalOneImporter(BaseImporter):
         super().__init__()
         
         # Set column mappings for CapitalOne's CSV format
-        self.set_column_mapping('Transaction Date', 'Date')
-        self.set_column_mapping('Transaction Description', 'Description')
-        self.set_column_mapping('Transaction Amount', 'Amount')
-        self.set_column_mapping('Balance', 'Balance')
-        self.set_column_mapping('Account Number', 'Account Number')
-        self.set_column_mapping('Transaction Type', 'Transaction Type')
+        self._set_column_mapping('Transaction Date', 'Date')
+        self._set_column_mapping('Transaction Description', 'Description')
+        self._set_column_mapping('Transaction Amount', 'Amount')
+        self._set_column_mapping('Balance', 'Balance')
+        self._set_column_mapping('Account Number', 'Account Number')
+        self._set_column_mapping('Transaction Type', 'Transaction Type')
         
-    def get_expected_columns(self):
+    def _get_expected_columns(self):
         """Return the expected columns for Capital One's CSV file."""
         return [
             'Account Number',
@@ -38,11 +38,11 @@ class CapitalOneImporter(BaseImporter):
             'Balance'
         ]
     
-    def get_institution_name(self):
+    def _get_institution_name(self):
         """Return the institution name for Capital  One."""
         return 'Capital One'
     
-    def get_account_name(self):
+    def _get_account_name(self):
         """Return the default account name for Capital One."""
         return 'Capital One' 
     

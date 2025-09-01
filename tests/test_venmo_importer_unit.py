@@ -28,20 +28,20 @@ class TestVenmoImporterInit:
         importer = VenmoImporter()
         
         # Check that Venmo-specific column mappings are set
-        assert importer.column_mappings['Date'] == 'Datetime'
+        assert importer._column_mappings['Date'] == 'Datetime'
         # Description will be mapped from 'From' or 'To' depending on transaction type
-        assert importer.column_mappings['Amount'] == 'Amount (total)'
-        assert importer.column_mappings['Transaction Type'] == 'Type'
+        assert importer._column_mappings['Amount'] == 'Amount (total)'
+        assert importer._column_mappings['Transaction Type'] == 'Type'
         
         # Check default values
-        assert importer.default_values['Account Number'] == ''
-        assert importer.default_values['Balance'] == 0.0
+        assert importer._default_values['Account Number'] == ''
+        assert importer._default_values['Balance'] == 0.0
 
     def test_get_expected_columns(self):
         """Test UT003: Required columns method returns 6 required Venmo columns."""
         importer = VenmoImporter()
         
-        expected_columns = importer.get_expected_columns()
+        expected_columns = importer._get_expected_columns()
         
         # Should return exactly 6 columns as specified in venmo_importer.md
         assert len(expected_columns) == 6
@@ -63,7 +63,7 @@ class TestVenmoImporterInit:
         """Test UT004: Institution name method returns 'Venmo'."""
         importer = VenmoImporter()
         
-        institution_name = importer.get_institution_name()
+        institution_name = importer._get_institution_name()
         
         assert institution_name == "Venmo"
 
@@ -81,10 +81,10 @@ class TestVenmoImporterInit:
         
         try:
             # Read the CSV data which should extract the username
-            importer.read_csv_data(temp_csv_file)
+            importer._read_csv_data(temp_csv_file)
             
             # Get the account name which should now return the extracted username
-            account_name = importer.get_account_name()
+            account_name = importer._get_account_name()
             
             # Should extract "@testuser" from header "Account Statement - (@testuser)"
             assert account_name == "@testuser"
@@ -106,10 +106,10 @@ class TestVenmoImporterInit:
         
         try:
             # Read the CSV data which should extract the complex username
-            importer.read_csv_data(temp_csv_file)
+            importer._read_csv_data(temp_csv_file)
             
             # Get the account name which should now return the extracted username
-            account_name = importer.get_account_name()
+            account_name = importer._get_account_name()
             
             # Should handle complex usernames with underscores, numbers, etc.
             assert account_name == "@user123_456"
@@ -131,10 +131,10 @@ class TestVenmoImporterInit:
         
         try:
             # Read the CSV data which should handle malformed header gracefully
-            importer.read_csv_data(temp_csv_file)
+            importer._read_csv_data(temp_csv_file)
             
             # Get the account name which should return default "Venmo" for malformed header
-            account_name = importer.get_account_name()
+            account_name = importer._get_account_name()
             
             # Should return default "Venmo" when no username is found in header
             assert account_name == "Venmo"
@@ -150,7 +150,7 @@ class TestVenmoImporterInit:
         
         # Test ISO datetime format
         iso_datetime = "2025-06-01T01:39:54"
-        parsed_date = importer.parse_transaction_date(iso_datetime)
+        parsed_date = importer._parse_transaction_date(iso_datetime)
         
         # Should parse to a date object
         assert parsed_date is not None
@@ -174,7 +174,7 @@ class TestVenmoImporterInit:
         ]
         
         for iso_datetime, expected_date in test_cases:
-            parsed_date = importer.parse_transaction_date(iso_datetime)
+            parsed_date = importer._parse_transaction_date(iso_datetime)
             
             # Should parse to a date object
             assert parsed_date is not None, f"Failed to parse: {iso_datetime}"
@@ -203,7 +203,7 @@ class TestVenmoImporterInit:
         ]
         
         for invalid_datetime in invalid_datetime_strings:
-            parsed_date = importer.parse_transaction_date(invalid_datetime)
+            parsed_date = importer._parse_transaction_date(invalid_datetime)
             
             # Should return None for invalid datetime strings
             assert parsed_date is None, f"Expected None for invalid datetime '{invalid_datetime}', but got {parsed_date}"
@@ -214,7 +214,7 @@ class TestVenmoImporterInit:
         
         # Test positive amount with Venmo format
         positive_amount = "+ $25.00"
-        parsed_amount = importer.parse_transaction_amount(positive_amount)
+        parsed_amount = importer._parse_transaction_amount(positive_amount)
         
         # Should parse to positive float value
         assert parsed_amount is not None
@@ -228,7 +228,7 @@ class TestVenmoImporterInit:
         
         # Test negative amount with Venmo format
         negative_amount = "- $150.00"
-        parsed_amount = importer.parse_transaction_amount(negative_amount)
+        parsed_amount = importer._parse_transaction_amount(negative_amount)
         
         # Should parse to negative float value
         assert parsed_amount is not None
@@ -242,7 +242,7 @@ class TestVenmoImporterInit:
         
         # Test zero amount with Venmo format
         zero_amount = "$0.00"
-        parsed_amount = importer.parse_transaction_amount(zero_amount)
+        parsed_amount = importer._parse_transaction_amount(zero_amount)
         
         # Should parse to zero float value
         assert parsed_amount is not None
@@ -256,7 +256,7 @@ class TestVenmoImporterInit:
         
         # Test comma-separated positive amount with Venmo format
         comma_amount = "+ $1,000.00"
-        parsed_amount = importer.parse_transaction_amount(comma_amount)
+        parsed_amount = importer._parse_transaction_amount(comma_amount)
         
         # Should parse to positive float value with commas removed
         assert parsed_amount is not None
@@ -266,7 +266,7 @@ class TestVenmoImporterInit:
         
         # Test comma-separated negative amount
         comma_negative_amount = "- $1,500.00"
-        parsed_negative_amount = importer.parse_transaction_amount(comma_negative_amount)
+        parsed_negative_amount = importer._parse_transaction_amount(comma_negative_amount)
         
         # Should parse to negative float value with commas removed
         assert parsed_negative_amount is not None
@@ -296,7 +296,7 @@ class TestVenmoImporterInit:
         ]
         
         for amount_str, expected_amount in test_cases:
-            parsed_amount = importer.parse_transaction_amount(amount_str)
+            parsed_amount = importer._parse_transaction_amount(amount_str)
             assert parsed_amount == expected_amount, f"Expected {expected_amount} for '{amount_str}', but got {parsed_amount}"
 
     def test_parse_transaction_amount_invalid_format(self):
@@ -321,7 +321,103 @@ class TestVenmoImporterInit:
         ]
         
         for invalid_amount in invalid_amounts:
-            parsed_amount = importer.parse_transaction_amount(invalid_amount)
+            parsed_amount = importer._parse_transaction_amount(invalid_amount)
             
             # Should return 0.0 for invalid currency formats
             assert parsed_amount == 0.0, f"Expected 0.0 for invalid amount '{invalid_amount}', but got {parsed_amount}"
+
+    def test_transform_transactions_venmo_csv_row(self):
+        """Test UT017: Venmo CSV row - Single valid row."""
+        importer = VenmoImporter()
+        
+        # Create a sample Venmo CSV row (as a pandas DataFrame)
+        import pandas as pd
+        
+        venmo_data = {
+            'ID': ['1234567890123456789'],
+            'Datetime': ['2024-01-15T14:30:22'],
+            'Type': ['Payment'],
+            'Status': ['Complete'],
+            'Note': ['Dinner payment'],
+            'From': ['Alex Johnson'],
+            'To': ['Sarah Wilson'],
+            'Amount (total)': ['- $75.00'],
+            'Amount (tip)': [''],
+            'Amount (tax)': ['0'],
+            'Amount (fee)': ['0'],
+            'Tax Rate': ['0'],
+            'Tax Exempt': [''],
+            'Funding Source': ['Venmo balance'],
+            'Destination': ['Venmo'],
+            'Beginning Balance': [''],
+            'Ending Balance': [''],
+            'Statement Period Venmo Fees': [''],
+            'Terminal Location': [''],
+            'Year to Date Venmo Fees': [''],
+            'Disclaimer': ['']
+        }
+        
+        venmo_df = pd.DataFrame(venmo_data)
+        
+        # Define existing columns that should be in the Excel file
+        existing_columns = [
+            'Date', 'Description', 'Category', 'Amount', 'Account', 
+            'Account #', 'Institution', 'Year', 'Month', 'Week', 
+            'Check Number', 'Full Description', 'Date Added'
+        ]
+        
+        # Transform the transaction
+        transformed = importer._transform_transactions(venmo_df, existing_columns)
+        
+        # Should return a list with one transformed transaction
+        assert len(transformed) == 1
+        
+        transaction = transformed[0]
+        
+        # Check that the transaction has the expected structure
+        assert 'Date' in transaction
+        assert 'Description' in transaction
+        assert 'Amount' in transaction
+        assert 'Account' in transaction
+        assert 'Institution' in transaction
+        
+        # Check specific values
+        assert transaction['Date'] == '1/15/2024'  # Date only from ISO datetime
+        assert transaction['Description'] == 'Sarah Wilson'  # 'To' field for debit
+        assert transaction['Amount'] == -75.00  # Negative amount for debit
+        assert transaction['Account'] == 'Venmo'  # Default account name
+        assert transaction['Institution'] == 'Venmo'
+
+    def test_transform_transactions_multi_line_header(self):
+        """Test UT018: Multi-line header - CSV with 3-line header."""
+        importer = VenmoImporter()
+        
+        # Create a temporary CSV file with multi-line header
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as f:
+            f.write("Account Statement - (@testuser) ,,,,,,,,,,,,,,,,,,,,,\n")
+            f.write("Account Activity,,,,,,,,,,,,,,,,,,,,,\n")
+            f.write(",ID,Datetime,Type,Status,Note,From,To,Amount (total),Amount (tip),Amount (tax),Amount (fee),Tax Rate,Tax Exempt,Funding Source,Destination,Beginning Balance,Ending Balance,Statement Period Venmo Fees,Terminal Location,Year to Date Venmo Fees,Disclaimer\n")
+            f.write(",,,,,,,,,,,,,,,,,,,,\"$1,250.00\",,,,,\n")
+            f.write(",1234567890123456789,2024-01-15T14:30:22,Payment,Complete,Dinner payment,Alex Johnson,Sarah Wilson,- $75.00,,0,,0,,Venmo balance,,,,,Venmo,,,\n")
+            temp_csv_file = f.name
+        
+        try:
+            # Read the CSV data which should handle multi-line header correctly
+            df = importer._read_csv_data(temp_csv_file)
+            
+            # Should have processed the transaction data correctly
+            assert len(df) > 0
+            assert 'Datetime' in df.columns
+            assert 'From' in df.columns
+            assert 'To' in df.columns
+            assert 'Amount (total)' in df.columns
+            
+            # Check that the transaction data was read correctly
+            assert df.iloc[0]['Datetime'] == '2024-01-15T14:30:22'
+            assert df.iloc[0]['From'] == 'Alex Johnson'
+            assert df.iloc[0]['To'] == 'Sarah Wilson'
+            assert df.iloc[0]['Amount (total)'] == '- $75.00'
+            
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_csv_file)

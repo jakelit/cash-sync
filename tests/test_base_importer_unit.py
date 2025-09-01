@@ -5,13 +5,15 @@ import pandas as pd
 from cash_sync.base_importer import BaseImporter
 
 class DummyImporter(BaseImporter):
-    def get_expected_columns(self):
+    def _get_expected_columns(self):
         return []
-    def get_institution_name(self):
+    def _get_institution_name(self):
         return "Dummy"
-    def get_account_name(self):
+    def _get_account_name(self):
         return "Dummy"
-    def parse_transaction_amount(self, amount_str, transaction_type=None):
+    def _get_transaction_type(self, row):
+        return "DEBIT"
+    def _parse_transaction_amount(self, amount_str, transaction_type=None):
         return float(amount_str)
 
 class TestBaseImporterUnit:
@@ -22,7 +24,7 @@ class TestBaseImporterUnit:
         """UT001: Valid date parsing - Standard date format should create a date object successfully."""
         importer = DummyImporter()
         date_str = "2024-06-22"
-        parsed = importer.parse_transaction_date(date_str)
+        parsed = importer._parse_transaction_date(date_str)
         assert parsed == datetime(2024, 6, 22).date()
 
     @pytest.mark.unit
@@ -30,7 +32,7 @@ class TestBaseImporterUnit:
         """UT002: Invalid date format - Malformed date string should return None."""
         importer = DummyImporter()
         date_str = "not-a-date"
-        parsed = importer.parse_transaction_date(date_str)
+        parsed = importer._parse_transaction_date(date_str)
         assert parsed is None
 
     @pytest.mark.unit
@@ -39,7 +41,7 @@ class TestBaseImporterUnit:
         importer = DummyImporter()
         # Use a date format that manual parsing doesn't handle but pandas can
         date_str = "2024-06-22T00:00:00"  # ISO format with time
-        parsed = importer.parse_transaction_date(date_str)
+        parsed = importer._parse_transaction_date(date_str)
         assert parsed == datetime(2024, 6, 22).date()
 
     @pytest.mark.unit
@@ -50,7 +52,7 @@ class TestBaseImporterUnit:
         # Mock pd.to_datetime to raise an exception
         with patch('pandas.to_datetime', side_effect=OSError("Test exception")):
             date_str = "invalid-date"
-            parsed = importer.parse_transaction_date(date_str)
+            parsed = importer._parse_transaction_date(date_str)
             assert parsed is None
 
     @pytest.mark.unit
@@ -58,15 +60,15 @@ class TestBaseImporterUnit:
         """UT006: Description cleaning - Raw bank description should be cleaned and readable."""        
         importer = DummyImporter()
         desc = "Debit Card Purchase - STARBUCKS COFFEE #1234"
-        cleaned = importer.clean_description(desc)
+        cleaned = importer._clean_description(desc)
         assert cleaned == "Starbucks Coffee"
 
     @pytest.mark.unit
     def test_clean_description_empty(self):
         """UT007: Empty description - Empty or null description should return empty string."""
         importer = DummyImporter()
-        assert importer.clean_description("") == ""
-        assert importer.clean_description(None) == ""
+        assert importer._clean_description("") == ""
+        assert importer._clean_description(None) == ""
 
     @pytest.mark.unit
     def test_transform_transactions_valid(self):
@@ -78,7 +80,7 @@ class TestBaseImporterUnit:
             'Date', 'Description', 'Category', 'Amount', 'Account', 'Account #', 'Institution',
             'Year', 'Month', 'Week', 'Check Number', 'Full Description', 'Date Added'
         ]
-        txns = importer.transform_transactions(df, existing_columns)
+        txns = importer._transform_transactions(df, existing_columns)
         assert isinstance(txns, list)
         assert len(txns) == 1
         assert txns[0]['Date'] == '1/1/2024'
@@ -96,7 +98,7 @@ class TestBaseImporterUnit:
             'Date', 'Description', 'Category', 'Amount', 'Account', 'Account #', 'Institution',
             'Year', 'Month', 'Week', 'Check Number', 'Full Description', 'Date Added'
         ]
-        txns = importer.transform_transactions(df, existing_columns)
+        txns = importer._transform_transactions(df, existing_columns)
         assert isinstance(txns, list)
         # Should skip row, so txns should be empty or have empty Date
         assert len(txns) == 1 or len(txns) == 0
@@ -113,14 +115,14 @@ class TestBaseImporterUnit:
         csv_file.write_text("test")
         excel_file.write_text("test")
         # Should not raise
-        importer.validate_files(str(csv_file), str(excel_file))
+        importer._validate_files(str(csv_file), str(excel_file))
 
     @pytest.mark.unit
     def test_validate_files_invalid(self, tmp_path):
         """UT011: Invalid file paths - Non-existent files should raise FileNotFoundError."""
         importer = DummyImporter()
         with pytest.raises(FileNotFoundError):
-            importer.validate_files(str(tmp_path / "no_such.csv"), str(tmp_path / "no_such.xlsx"))
+            importer._validate_files(str(tmp_path / "no_such.csv"), str(tmp_path / "no_such.xlsx"))
 
     @pytest.mark.unit
     def test_validate_files_wrong_extension(self, tmp_path):
@@ -132,7 +134,7 @@ class TestBaseImporterUnit:
         csv_file.write_text("test")
         excel_file.write_text("test")
         with pytest.raises(ValueError):
-            importer.validate_files(str(csv_file), str(excel_file))
+            importer._validate_files(str(csv_file), str(excel_file))
 
     @pytest.mark.unit
     def test_validate_files_excel_not_found(self, tmp_path):
@@ -144,7 +146,7 @@ class TestBaseImporterUnit:
         # Use non-existent Excel file
         excel_file = tmp_path / "no_such.xlsx"
         with pytest.raises(FileNotFoundError) as excinfo:
-            importer.validate_files(str(csv_file), str(excel_file))
+            importer._validate_files(str(csv_file), str(excel_file))
         assert "Excel file not found" in str(excinfo.value)
 
     @pytest.mark.unit
@@ -158,7 +160,7 @@ class TestBaseImporterUnit:
         excel_file = tmp_path / "file.txt"
         excel_file.write_text("test")
         with pytest.raises(ValueError) as excinfo:
-            importer.validate_files(str(csv_file), str(excel_file))
+            importer._validate_files(str(csv_file), str(excel_file))
         assert "Second file must be an Excel file" in str(excinfo.value)
 
     @pytest.mark.unit
@@ -166,37 +168,37 @@ class TestBaseImporterUnit:
         """UT013: Column mapping - Should return mapped target column value."""
         importer = DummyImporter()
         row = {"BankDate": "2024-01-01"}
-        importer.set_column_mapping("BankDate", "Date")
-        assert importer.get_column_value(row, "Date") == "2024-01-01"
+        importer._set_column_mapping("BankDate", "Date")
+        assert importer._get_column_value(row, "Date") == "2024-01-01"
 
     @pytest.mark.unit
     def test_get_column_value_missing(self):
         """UT014: Missing column - Should return default value if column is missing."""
         importer = DummyImporter()
-        importer.set_default_value("Category", "Uncategorized")
+        importer._set_default_value("Category", "Uncategorized")
         row = {"Other": "foo"}
-        assert importer.get_column_value(row, "Category") == "Uncategorized"
+        assert importer._get_column_value(row, "Category") == "Uncategorized"
 
     @pytest.mark.unit
     def test_set_column_mapping(self):
         """UT015: Custom column mapping - Should store mapping correctly."""
         importer = DummyImporter()
-        importer.set_column_mapping("BankDate", "Date")
-        assert importer.column_mappings["Date"] == "BankDate"
+        importer._set_column_mapping("BankDate", "Date")
+        assert importer._column_mappings["Date"] == "BankDate"
 
     @pytest.mark.unit
     def test_set_default_value(self):
         """UT016: Default value setting - Should store default value correctly."""
         importer = DummyImporter()
-        importer.set_default_value("Category", "Uncategorized")
-        assert importer.default_values["Category"] == "Uncategorized"
+        importer._set_default_value("Category", "Uncategorized")
+        assert importer._default_values["Category"] == "Uncategorized"
 
     @pytest.mark.unit
     def test_format_date_mdy_string_input(self):
         """UT055: String input - String date passed to format_date_mdy should return string unchanged."""
         importer = DummyImporter()
         date_str = "2024-06-22"
-        result = importer.format_date_mdy(date_str)
+        result = importer._format_date_mdy(date_str)
         assert result == date_str
 
     @pytest.mark.unit
@@ -204,7 +206,7 @@ class TestBaseImporterUnit:
         """UT056: Date object input - Date object passed to format_date_mdy should return formatted M/D/YYYY string."""
         importer = DummyImporter()
         date_obj = datetime(2024, 6, 22).date()
-        result = importer.format_date_mdy(date_obj)
+        result = importer._format_date_mdy(date_obj)
         assert result == "6/22/2024"
 
     @pytest.mark.unit
@@ -212,7 +214,7 @@ class TestBaseImporterUnit:
         """UT057: Payment processor prefix removal - Description with payment processor prefix should have prefix removed."""
         importer = DummyImporter()
         desc = "TST* STARBUCKS COFFEE"
-        cleaned = importer.clean_description(desc)
+        cleaned = importer._clean_description(desc)
         assert cleaned == "Starbucks Coffee"
 
     @pytest.mark.unit
@@ -220,7 +222,7 @@ class TestBaseImporterUnit:
         """UT058: Multiple prefix removal - Description with multiple prefixes should have all prefixes removed."""
         importer = DummyImporter()
         desc = "Debit Card Purchase - PP* AMAZON.COM"
-        cleaned = importer.clean_description(desc)
+        cleaned = importer._clean_description(desc)
         assert cleaned == "Amazon.com"
 
     @pytest.mark.unit
@@ -243,7 +245,7 @@ class TestBaseImporterUnit:
         ]
         
         # This should process the valid rows and skip the invalid one
-        txns = importer.transform_transactions(df, existing_columns)
+        txns = importer._transform_transactions(df, existing_columns)
         
         # Should have processed the valid rows (1 and 3)
         assert isinstance(txns, list)
@@ -275,7 +277,7 @@ class TestBaseImporterUnit:
         ]
         
         # This should process all rows: 3 valid + 1 with empty date (None date gets empty fields)
-        txns = importer.transform_transactions(df, existing_columns)
+        txns = importer._transform_transactions(df, existing_columns)
         
         # Should have processed 4 rows: 3 valid + 1 with empty date
         assert isinstance(txns, list)
@@ -307,7 +309,7 @@ class TestBaseImporterUnit:
         # Create a DataFrame with all required columns
         df = pd.DataFrame({"Date": ["2024-01-01"], "Amount": ["10.00"], "Description": ["Test"]})
         # Should not raise an exception
-        importer.validate_columns(df, ["Date", "Amount", "Description"])
+        importer._validate_columns(df, ["Date", "Amount", "Description"])
 
     @pytest.mark.unit
     def test_validate_columns_missing_required(self):
@@ -316,7 +318,7 @@ class TestBaseImporterUnit:
         # Create a DataFrame with missing columns
         df = pd.DataFrame({"Date": ["2024-01-01"], "Description": ["Test"]})
         with pytest.raises(ValueError):
-            importer.validate_columns(df, ["Date", "Amount", "Description"])
+            importer._validate_columns(df, ["Date", "Amount", "Description"])
 
     @pytest.mark.unit
     def test_validate_columns_error_message_content(self):
@@ -325,7 +327,7 @@ class TestBaseImporterUnit:
         # Create a DataFrame with missing columns
         df = pd.DataFrame({"Date": ["2024-01-01"], "Description": ["Test"]})
         with pytest.raises(ValueError) as excinfo:
-            importer.validate_columns(df, ["Date", "Amount", "Description"])
+            importer._validate_columns(df, ["Date", "Amount", "Description"])
         msg = str(excinfo.value)
         assert "Available columns in your CSV" in msg
         assert "missing some required columns" in msg

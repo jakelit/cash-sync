@@ -20,25 +20,25 @@ class AllyImporter(BaseImporter):
         super().__init__()
         
         # Set column mappings for Ally's CSV format
-        self.set_column_mapping('Date', 'Date')
-        self.set_column_mapping('Amount', 'Amount')
-        self.set_column_mapping('Type', 'Transaction Type')
-        self.set_column_mapping('Description', 'Description')
+        self._set_column_mapping('Date', 'Date')
+        self._set_column_mapping('Amount', 'Amount')
+        self._set_column_mapping('Type', 'Transaction Type')
+        self._set_column_mapping('Description', 'Description')
         
         # Set default values for required fields
-        self.set_default_value('Account Number', 'Ally Bank')
-        self.set_default_value('Balance', 0.0)
+        self._set_default_value('Account Number', 'Ally Bank')
+        self._set_default_value('Balance', 0.0)
     
-    def get_expected_columns(self):
+    def _get_expected_columns(self):
         """Return the expected columns for Ally CSV file."""
         return [
             'Date', 'Time', 'Amount', 'Type', 'Description'
         ]
     
-    def get_institution_name(self):
+    def _get_institution_name(self):
         """Return the institution name for Ally."""
         return 'Ally Bank'
     
-    def get_account_name(self):
+    def _get_account_name(self):
         """Return the default account name for Ally."""
         return 'Ally'
