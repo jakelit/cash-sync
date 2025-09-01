@@ -8,7 +8,6 @@ column names (e.g., 'Transaction Type') to the standardized transaction
 format and correctly interpreting transaction amounts.
 """
 from .base_importer import BaseImporter
-from .logger import logger
 
 class AllyImporter(BaseImporter):
     """
@@ -43,19 +42,3 @@ class AllyImporter(BaseImporter):
     def get_account_name(self):
         """Return the default account name for Ally."""
         return 'Ally'
-    
-    def parse_transaction_amount(self, amount_str, transaction_type=None):
-        """Parse transaction amount and determine if it's a debit or credit."""
-        try:
-            # Remove any currency symbols and whitespace
-            amount_str = amount_str.replace('$', '').strip()
-            
-            # Convert to float
-            amount = float(amount_str)
-            
-            # For Ally, negative amounts are debits, positive are credits
-            return amount
-            
-        except (ValueError, TypeError) as e:
-            logger.error("Error parsing amount '%s': %s", amount_str, e)
-            return 0.0

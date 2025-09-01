@@ -6,9 +6,11 @@ of BaseImporter. It is specifically designed to handle Venmo's unique CSV format
 with multi-line headers, ISO datetime formats, and signed currency amounts.
 """
 
-from .base_importer import BaseImporter
 import re
+
 import pandas as pd
+
+from .base_importer import BaseImporter
 
 
 class VenmoImporter(BaseImporter):
@@ -93,8 +95,3 @@ class VenmoImporter(BaseImporter):
             self.extracted_username = match.group(0)
         else:
             self.extracted_username = "Venmo"
-    
-    def parse_transaction_amount(self, amount_str, transaction_type=None):
-        """Parse a transaction amount string and determine if it's a debit or credit."""
-        # Minimal implementation - will be properly implemented later
-        return 0.0

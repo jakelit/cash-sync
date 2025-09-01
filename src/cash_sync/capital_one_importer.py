@@ -6,7 +6,6 @@ specifically designed to handle the CSV format exported from Capital One's
 online portal.
 """
 from .base_importer import BaseImporter
-from .logger import logger
 
 class CapitalOneImporter(BaseImporter):
     """
@@ -45,28 +44,5 @@ class CapitalOneImporter(BaseImporter):
     
     def get_account_name(self):
         """Return the default account name for Capital One."""
-        return 'Capital One'
-    
-    def parse_transaction_amount(self, amount_str, transaction_type=None):
-        """Parse transaction amount and determine if it's a debit or credit."""
-        try:
-            # Remove any currency symbols and whitespace
-            amount_str = amount_str.replace('$', '').strip()
-            
-            # Convert to float
-            amount = float(amount_str)
-            
-            # For CapitalOne, we need to check the transaction type
-            if transaction_type:
-                transaction_type = transaction_type.lower()
-                if 'debit' in transaction_type:
-                    amount = -abs(amount)  # Ensure negative for debits
-                elif 'credit' in transaction_type:
-                    amount = abs(amount)   # Ensure positive for credits
-            
-            return amount
-            
-        except (ValueError, TypeError) as e:
-            logger.error("Error parsing amount '%s': %s", amount_str, e)
-            return 0.0 
+        return 'Capital One' 
     

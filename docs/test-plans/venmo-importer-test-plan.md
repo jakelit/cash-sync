@@ -149,16 +149,18 @@ pytest -k "PERF001" tests/test_venmo_importer_performance.py
 | UT011 | Unit | `parse_transaction_amount()` | Positive amount | "+ $25.00" | Parses to 25.00 | High | Venmo-specific |
 | UT012 | Unit | `parse_transaction_amount()` | Negative amount | "- $150.00" | Parses to -150.00 | High | Sign preservation |
 | UT013 | Unit | `parse_transaction_amount()` | Zero amount | "$0.00" | Parses to 0.00 | Medium | Edge case |
-| UT014 | Unit | `parse_transaction_amount()` | Invalid format | Non-currency string | Returns appropriate error | High | Error handling |
-| UT015 | Unit | `transform_transactions()` | Venmo CSV row | Single valid row | Transformed transaction dict | High | Data transformation |
-| UT016 | Unit | `transform_transactions()` | Multi-line header | CSV with 3-line header | Skips header rows correctly | High | Venmo-specific |
-| UT017 | Unit | `transform_transactions()` | From/To mapping | Transaction with From/To | Correct description logic | High | Venmo-specific |
-| UT018 | Unit | `transform_transactions()` | Special characters | Emojis in notes | Handles Unicode correctly | Medium | Edge case |
-| UT019 | Unit | `transform_transactions()` | Empty fields | Missing From/To fields | Handles gracefully | Medium | Edge case |
-| UT020 | Unit | `transform_transactions()` | Multi-line disclaimer | CSV with multi-line disclaimer in last row | Handles multi-line disclaimer correctly | Medium | Venmo-specific |
-| UT021 | Unit | `read_csv_data()` | Balance row filtering | CSV with beginning/ending balance rows | Filters out balance rows correctly | High | Venmo-specific |
-| UT022 | Unit | `read_csv_data()` | Multi-line CSV parsing | CSV with quoted multi-line values | Parses multi-line cells correctly | High | Venmo-specific |
-| UT023 | Unit | `read_csv_data()` | Transaction ID validation | CSV with invalid/missing IDs | Only processes rows with valid IDs | High | Venmo-specific |
+| UT014 | Unit | `parse_transaction_amount()` | Comma-separated numbers | "+ $1,000.00" | Parses to 1000.00 | High | Venmo-specific |
+| UT015 | Unit | `parse_transaction_amount()` | Additional formats | Various currency formats | Handles multiple formats | High | Robustness |
+| UT016 | Unit | `parse_transaction_amount()` | Invalid format | Non-currency string | Returns appropriate error | High | Error handling |
+| UT017 | Unit | `transform_transactions()` | Venmo CSV row | Single valid row | Transformed transaction dict | High | Data transformation |
+| UT018 | Unit | `transform_transactions()` | Multi-line header | CSV with 3-line header | Skips header rows correctly | High | Venmo-specific |
+| UT019 | Unit | `transform_transactions()` | From/To mapping | Transaction with From/To | Correct description logic | High | Venmo-specific |
+| UT020 | Unit | `transform_transactions()` | Special characters | Emojis in notes | Handles Unicode correctly | Medium | Edge case |
+| UT021 | Unit | `transform_transactions()` | Empty fields | Missing From/To fields | Handles gracefully | Medium | Edge case |
+| UT022 | Unit | `transform_transactions()` | Multi-line disclaimer | CSV with multi-line disclaimer in last row | Handles multi-line disclaimer correctly | Medium | Venmo-specific |
+| UT023 | Unit | `read_csv_data()` | Balance row filtering | CSV with beginning/ending balance rows | Filters out balance rows correctly | High | Venmo-specific |
+| UT024 | Unit | `read_csv_data()` | Multi-line CSV parsing | CSV with quoted multi-line values | Parses multi-line cells correctly | High | Venmo-specific |
+| UT025 | Unit | `read_csv_data()` | Transaction ID validation | CSV with invalid/missing IDs | Only processes rows with valid IDs | High | Venmo-specific |
 | IT001 | Integration | CSV file reading | Valid Venmo CSV | Standard Venmo export | Successfully reads format | High | Integration |
 | IT002 | Integration | Data transformation | Complete pipeline | Sample Venmo CSV | All fields transformed | High | End-to-end |
 | IT003 | Integration | Duplicate detection | Venmo transactions | Same file imported twice | Duplicates filtered | High | Integration |
@@ -199,6 +201,8 @@ pytest -k "PERF001" tests/test_venmo_importer_performance.py
   - "+ $25.00" (credit)
   - "- $150.00" (debit)
   - "$0.00" (zero)
+  - "+ $1,000.00" (comma-separated credit)
+  - "- $1,500.00" (comma-separated debit)
 - **Transaction Types:**
   - Payment to friend
   - Payment from friend

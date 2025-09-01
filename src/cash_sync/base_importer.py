@@ -146,16 +146,22 @@ class BaseImporter(ABC):
         csv_handler.validate_file()
         return csv_handler.read_csv()
 
-    @abstractmethod
     def parse_transaction_amount(self, amount_str, transaction_type=None):
         """
         Parse a transaction amount string and determine if it's a debit or credit.
         
-        This method handles the bank-specific logic for interpreting transaction amounts.
-        Different banks may represent debits and credits differently:
-        - Some use positive/negative signs
-        - Some use separate debit/credit columns
-        - Some rely on transaction type to determine direction
+        This method handles various currency formats and determines transaction direction
+        based on either explicit signs or transaction type. It supports:
+        
+        Currency Formats:
+        - Venmo format: "+ $25.00", "- $150.00"
+        - Standard formats: "$25.00", "+$25.00", "-$25.00"
+        - Plain formats: "25.00", "+25.00", "-25.00"
+        - Comma-separated: "1,000.00", "+$1,000.00"
+        
+        Transaction Direction Logic:
+        - Sign-based: Positive = credit, negative = debit (Ally, Venmo)
+        - Type-based: Uses transaction_type parameter (Capital One)
         
         Args:
             amount_str (str): The raw amount string from the CSV (e.g., "$50.00", "-$25.00")
@@ -173,7 +179,53 @@ class BaseImporter(ABC):
             >>> parse_transaction_amount("-$25.00") # Returns -25.0 (debit)
             >>> parse_transaction_amount("100.00", "debit")  # Returns -100.0
         """
-        raise NotImplementedError  # pragma: no cover
+        if not amount_str or not isinstance(amount_str, str):
+            return 0.0
+            
+        # Remove whitespace
+        amount_str = amount_str.strip()
+        
+        # Handle empty string after stripping
+        if not amount_str:
+            return 0.0
+        
+        # Extract sign and numeric part
+        sign = 1
+        numeric_part = amount_str
+        
+        # Check for explicit signs (including Venmo's format with space: "+ $25.00")
+        if amount_str.startswith('+'):
+            numeric_part = amount_str[1:]
+        elif amount_str.startswith('-'):
+            sign = -1
+            numeric_part = amount_str[1:]
+        
+        # Remove dollar sign if present (handle both "$25.00" and " $25.00" formats)
+        if numeric_part.startswith('$'):
+            numeric_part = numeric_part[1:]
+        elif numeric_part.startswith(' $'):  # Handle Venmo's space + dollar format
+            numeric_part = numeric_part[2:]
+        
+        # Remove commas and convert to float
+        try:
+            numeric_part = numeric_part.replace(',', '')
+            amount = float(numeric_part)
+            
+            # Apply the sign from the amount string
+            amount = sign * amount
+            
+            # If transaction_type is provided, use it to override the sign
+            if transaction_type:
+                transaction_type = transaction_type.lower()
+                if 'debit' in transaction_type:
+                    amount = -abs(amount)  # Ensure negative for debits
+                elif 'credit' in transaction_type:
+                    amount = abs(amount)   # Ensure positive for credits
+            
+            return amount
+            
+        except (ValueError, TypeError):
+            return 0.0
 
     def set_column_mapping(self, source_column: str, target_column: str):
         """
