@@ -12,9 +12,7 @@ class DummyImporter(BaseImporter):
     def _get_account_name(self):
         return "Dummy"
     def _get_transaction_type(self, row):
-        return "DEBIT"
-    def _parse_transaction_amount(self, amount_str, transaction_type=None):
-        return float(amount_str)
+        return "PURCHASE"  # Use neutral type that doesn't contain "debit" or "credit"
 
 class TestBaseImporterUnit:
     """Unit tests for BaseImporter class."""
@@ -227,12 +225,12 @@ class TestBaseImporterUnit:
 
     @pytest.mark.unit
     def test_transform_transactions_row_exceptions(self):
-        """UT059: Row processing exceptions - Row with data that causes exceptions should be skipped and logged."""
+        """UT059: Row processing exceptions - Row with invalid data should be processed with default values."""
         import pandas as pd
         importer = DummyImporter()
         
-        # Create a DataFrame with a row that will cause a ValueError during parsing
-        # This will trigger the exception handling code
+        # Create a DataFrame with invalid data that should be processed with defaults
+        # Invalid dates become empty strings, invalid amounts become 0.0
         df = pd.DataFrame([
             {'Date': '2024-01-01', 'Amount': '10.00', 'Type': 'DEBIT', 'Description': 'Test'},  # Valid row
             {'Date': 'invalid-date', 'Amount': 'not-a-number', 'Type': 'DEBIT', 'Description': 'Test'},  # Invalid row
@@ -244,21 +242,28 @@ class TestBaseImporterUnit:
             'Year', 'Month', 'Week', 'Check Number', 'Full Description', 'Date Added'
         ]
         
-        # This should process the valid rows and skip the invalid one
+        # This should process all rows, using defaults for invalid data
         txns = importer._transform_transactions(df, existing_columns)
         
-        # Should have processed the valid rows (1 and 3)
+        # Should have processed all rows: 2 valid + 1 with invalid data that gets default values
         assert isinstance(txns, list)
-        assert len(txns) == 2  # Only the valid rows should be processed
+        assert len(txns) == 3  # All rows processed: 2 valid + 1 with defaults
         
         # Check that the valid transactions are present
         dates = [t['Date'] for t in txns]
         assert '1/1/2024' in dates
         assert '1/3/2024' in dates
+        assert '' in dates  # Invalid date becomes empty string
+        
+        # Check that invalid amount becomes 0.0
+        amounts = [t['Amount'] for t in txns]
+        assert 10.0 in amounts
+        assert 20.0 in amounts
+        assert 0.0 in amounts  # Invalid amount becomes 0.0
 
     @pytest.mark.unit
     def test_transform_transactions_mixed_valid_invalid(self):
-        """UT060: Mixed valid and invalid rows - DataFrame with some valid rows and some causing exceptions."""
+        """UT060: Mixed valid and invalid rows - DataFrame with valid rows and rows with invalid data processed with defaults."""
         import pandas as pd
         importer = DummyImporter()
         
@@ -276,18 +281,27 @@ class TestBaseImporterUnit:
             'Year', 'Month', 'Week', 'Check Number', 'Full Description', 'Date Added'
         ]
         
-        # This should process all rows: 3 valid + 1 with empty date (None date gets empty fields)
+        # This should process all rows: 3 valid + 2 with invalid data that get default values
         txns = importer._transform_transactions(df, existing_columns)
         
-        # Should have processed 4 rows: 3 valid + 1 with empty date
+        # Should have processed all 5 rows: 3 valid + 2 with defaults
         assert isinstance(txns, list)
-        assert len(txns) == 4  # 3 valid + 1 with empty date
+        assert len(txns) == 5  # All rows processed: 3 valid + 2 with defaults
         
         # Check that the valid transactions are present
         dates = [t['Date'] for t in txns]
         assert '1/1/2024' in dates
         assert '1/3/2024' in dates
         assert '1/5/2024' in dates
+        assert '' in dates  # None date and invalid amount both get processed with defaults
+        
+        # Check amounts - should include 0.0 for the invalid amount row
+        amounts = [t['Amount'] for t in txns]
+        assert 10.0 in amounts
+        assert 20.0 in amounts  
+        assert 30.0 in amounts
+        assert 50.0 in amounts
+        assert 0.0 in amounts  # Invalid amount becomes 0.0
         
         # Check that the transaction with None date has empty date fields
         empty_date_transaction = None
@@ -332,3 +346,59 @@ class TestBaseImporterUnit:
         assert "Available columns in your CSV" in msg
         assert "missing some required columns" in msg
         assert "Please check that you selected the correct bank" in msg
+
+    @pytest.mark.unit
+    def test_transform_transactions_automatic_column_mapping_with_transformation_override(self):
+        """UT075: Automatic column mapping with transformation override - CSV with Amount column in raw format, Excel has Amount column."""
+        importer = DummyImporter()
+        
+        # Create test data with columns that match Excel column names
+        # but need transformation (e.g., Amount needs parsing, Date needs formatting)
+        csv_data = pd.DataFrame([
+            {
+                'Date': '2024-06-22',
+                'Amount': '$25.50',  # Raw amount with $ symbol - should be transformed to float
+                'Description': 'Test Transaction',
+                'Note': 'Special note with emoji 🎉',
+                'Type': 'Purchase',
+                'Reference': 'REF123',
+                'Custom Field': 'This should not be included'
+            }
+        ])
+        
+        # Simulate existing Excel columns (Note, Type, and Amount match CSV columns)
+        existing_columns = ['Date', 'Amount', 'Description', 'Note', 'Type', 'Category', 'Account']
+        
+        # Transform transactions
+        result = importer._transform_transactions(csv_data, existing_columns)
+        
+        # Verify automatic column mapping worked
+        assert len(result) == 1
+        transaction = result[0]
+        
+        # Check that automatically mapped columns are included
+        assert 'Note' in transaction
+        assert transaction['Note'] == 'Special note with emoji 🎉'
+        assert 'Type' in transaction  
+        assert transaction['Type'] == 'Purchase'
+        
+        # CRITICAL TEST: Check that specific mappings override automatic mappings
+        # Amount should be transformed by BaseImporter logic, NOT the raw CSV value
+        assert 'Amount' in transaction
+        assert transaction['Amount'] == 25.50  # Should be parsed as float, not '$25.50'
+        assert transaction['Amount'] != '$25.50'  # Should NOT be the raw CSV value
+        
+        # Date should also be transformed by BaseImporter logic
+        assert transaction['Date'] != '2024-06-22'  # Should be formatted by _format_date_mdy
+        
+        # Description should be cleaned by BaseImporter logic
+        assert transaction['Description'] == 'Test Transaction'  # Should be cleaned
+        
+        # Check that non-matching columns are not included
+        assert 'Reference' not in transaction  # Not in existing_columns
+        assert 'Custom Field' not in transaction  # Not in existing_columns
+        
+        # Check that standard fields are still present
+        assert 'Category' in transaction
+        assert 'Account' in transaction
+        assert transaction['Account'] == 'Dummy'

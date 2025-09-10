@@ -29,6 +29,7 @@ import sys
 import argparse
 from .capital_one_importer import CapitalOneImporter
 from .ally_importer import AllyImporter
+from .venmo_importer import VenmoImporter
 from .base_importer import BaseImporter
 from .importer_interface import TransactionImporter
 from .excel_handler import ExcelHandler
@@ -41,7 +42,8 @@ from .auto_categorizer import AutoCategorizer
 # Available banks
 BANKS = {
     "ally": AllyImporter,
-    "capitalone": CapitalOneImporter    
+    "capitalone": CapitalOneImporter,
+    "venmo": VenmoImporter
 }
 
 def main():
@@ -120,6 +122,7 @@ if __name__ == "__main__":
 __all__ = [
     'CapitalOneImporter',
     'AllyImporter',
+    'VenmoImporter',
     'BaseImporter',
     'TransactionImporter',
     'ExcelHandler',

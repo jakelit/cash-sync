@@ -45,14 +45,44 @@ class TransactionImporter(ABC):
 
 The `BaseImporter` class provides the **shared import workflow** through the template method pattern:
 - **Complete import workflow** (`import_transactions()` method) - **DO NOT OVERRIDE**
+- **Automatic column mapping** - Automatically includes CSV columns that match Excel column names
+- **Robust error handling** - Processes rows with invalid data using default values rather than skipping
 - Common CSV validation logic
 - Duplicate checking functionality
 - Excel writing operations
-- Error handling and logging
+- Comprehensive logging and warning system
 - Template method pattern for the import workflow
 - Date parsing with optional override capability
 
 The abstract methods enable this shared workflow by providing bank-specific configuration points that the base class can call during the import process.
+
+#### Automatic Column Mapping
+
+The `BaseImporter` includes **automatic column mapping** functionality in the `_transform_transactions()` method:
+
+1. **Phase 1 - Automatic Mapping**: Any CSV column whose name exactly matches an Excel column name is automatically included in the transaction
+2. **Phase 2 - Specific Mapping**: Specific mapping logic (Date, Description, Amount, etc.) is applied, which overrides automatic mappings if there are conflicts
+
+This approach provides:
+- **Zero-configuration mapping** for columns with matching names (e.g., "Note" CSV column → "Note" Excel column)
+- **Backward compatibility** - All existing specific mappings continue to work unchanged
+- **Flexibility** - Bank-specific implementations can still override `_transform_transactions()` for custom logic
+- **Extensibility** - New importers benefit automatically from matching column names
+
+#### Robust Error Handling
+
+The `BaseImporter` implements **graceful error handling** for invalid data:
+
+1. **Invalid Dates**: Unparseable dates (e.g., "invalid-date") are converted to empty strings with warning logs
+2. **Invalid Amounts**: Non-numeric amounts are processed as 0.0 with appropriate transformations
+3. **Missing Data**: Null/None values are handled with sensible defaults
+4. **User Experience**: Rather than skipping rows entirely, invalid data is processed with defaults, allowing users to manually correct the data later
+
+This approach ensures:
+- **Data Preservation** - No transaction data is lost due to formatting issues
+- **User-Friendly** - Users can see and correct problematic data rather than wondering why transactions are missing
+- **Comprehensive Logging** - All issues are logged with appropriate warning levels for debugging
+- **Graceful Degradation** - System continues processing even with problematic data
 
 ### Bank-Specific Implementations
 
@@ -74,6 +104,9 @@ Configuration methods like `set_column_mapping()` and `set_default_value()` shou
 
 ### Positive Consequences
 - **Shared Workflow**: All importers use the same proven import workflow logic
+- **Automatic Column Mapping**: Zero-configuration mapping for columns with matching names reduces boilerplate code
+- **Robust Error Handling**: Graceful processing of invalid data with defaults improves user experience
+- **Data Preservation**: No transaction data is lost due to formatting issues - users can manually correct problematic data
 - **Consistency**: All importers follow the same interface and behavior patterns
 - **Code Reuse**: Common functionality is shared through the base class
 - **Extensibility**: New banks can be added by implementing only the required abstract methods
@@ -81,6 +114,7 @@ Configuration methods like `set_column_mapping()` and `set_default_value()` shou
 - **Maintainability**: Changes to common logic only need to be made in one place
 - **Type Safety**: Abstract methods ensure all required functionality is implemented
 - **Flexibility**: Optional method overrides allow for bank-specific customizations
+- **Backward Compatibility**: Existing specific column mappings continue to work unchanged
 
 ### Negative Consequences
 - **Complexity**: Additional abstraction layers increase code complexity
@@ -146,7 +180,33 @@ class AllyImporter(BaseImporter):
         self.set_column_mapping("Transaction Description", "Description")
         # Set default values for missing columns
         self.set_default_value("Account Number", "Ally-1234")
+        
+        # Note: Automatic column mapping handles any CSV columns that match Excel columns
+        # For example, if CSV has "Note" column and Excel has "Note" column,
+        # it will be automatically included without explicit mapping
 ```
+
+### Automatic Column Mapping Example
+
+The automatic column mapping feature works seamlessly:
+
+```python
+# CSV has columns: ["Datetime", "Amount (total)", "Note", "Type"]
+# Excel has columns: ["Date", "Amount", "Description", "Note", "Category", ...]
+
+# In VenmoImporter:
+def __init__(self):
+    super().__init__()
+    # Only need to map columns that don't match
+    self.set_column_mapping('Datetime', 'Date')
+    self.set_column_mapping('Amount (total)', 'Amount') 
+    self.set_column_mapping('Type', 'Transaction Type')
+    
+    # "Note" column is automatically mapped since CSV "Note" = Excel "Note"
+    # No explicit mapping needed!
+```
+
+This reduces boilerplate code and makes new importers easier to implement.
 
 ## References
 

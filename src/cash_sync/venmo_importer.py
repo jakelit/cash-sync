@@ -57,7 +57,7 @@ class VenmoImporter(BaseImporter):
             self._extract_username_from_header(first_line)
         
         # Read CSV starting from line 4 (data rows), no header
-        df = pd.read_csv(csv_file, skiprows=3, header=None, encoding='utf-8')
+        df = pd.read_csv(csv_file, skiprows=3, header=None, encoding='utf-8', dtype=str)
         
         # Get column headers from line 3 and clean them
         with open(csv_file, 'r', encoding='utf-8') as f:
@@ -77,7 +77,8 @@ class VenmoImporter(BaseImporter):
         df = df.dropna(how='all')
         
         # Filter out balance rows - keep only rows with valid transaction IDs
-        df = df[df['ID'].notna() & (df['ID'] != '')]
+        # Handle both NaN values and empty strings
+        df = df[df['ID'].notna() & (df['ID'] != '') & (df['ID'].astype(str) != 'nan')]
         
         return df
     
@@ -121,6 +122,7 @@ class VenmoImporter(BaseImporter):
         For Venmo transactions:
         - Negative amount = money sent (use 'To' field)
         - Positive amount = money received (use 'From' field)
+        - If the appropriate field is empty, use fallback description
         
         Args:
             row (dict): A dictionary representing a single row from the CSV file
@@ -137,6 +139,10 @@ class VenmoImporter(BaseImporter):
         
         # For Venmo: negative amount = money sent (use 'To' field), positive = money received (use 'From' field)
         if amount < 0:
-            return to_field  # Money sent to someone
+            # Money sent - use 'To' field, fallback if empty
+            description = to_field if to_field else 'Venmo Transaction'
         else:
-            return from_field  # Money received from someone
+            # Money received - use 'From' field, fallback if empty
+            description = from_field if from_field else 'Venmo Transaction'
+            
+        return description

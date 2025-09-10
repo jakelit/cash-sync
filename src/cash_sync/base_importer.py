@@ -709,8 +709,16 @@ class BaseImporter(ABC):
                     month_start = datetime(trans_date.year, trans_date.month, 1)
                     week_start = self._get_week_start(trans_date)
                 
-                # Create transaction mapping
-                transaction = {
+                # Start with automatic mapping for any CSV columns that match Excel columns
+                transaction = {}
+                
+                # Automatically include any CSV columns that match Excel column names
+                for csv_col in row.index:
+                    if csv_col in existing_columns:
+                        transaction[csv_col] = str(row.get(csv_col, '')).strip()
+                
+                # Then apply specific mapping logic (this will override automatic mappings)
+                transaction.update({
                     'Date': self._format_date_mdy(trans_date),
                     'Description': self._clean_description(self._get_description(row)),
                     'Category': '',  # Will be empty for user to categorize
@@ -724,7 +732,7 @@ class BaseImporter(ABC):
                     'Check Number': self._get_check_number(row),
                     'Full Description': self._get_full_description(row),
                     'Date Added': self._format_date_mdy(datetime.now())
-                }
+                })
                 
                 # Filter to only include columns that exist in the Excel file
                 filtered_transaction = {

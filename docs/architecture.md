@@ -98,10 +98,12 @@ Cash Sync is a Python-based financial transaction management application that im
 #### BaseImporter (`base_importer.py`)
 - **Purpose**: Abstract base class providing common import functionality
 - **Responsibilities**:
-  - CSV validation and parsing
+  - CSV validation and parsing with robust error handling
+  - Automatic column mapping for matching field names
+  - Graceful processing of invalid data with default values
   - Duplicate detection
   - Excel writing operations
-  - Error handling and logging
+  - Comprehensive error handling and logging
 - **Dependencies**: CSVHandler, ExcelHandler, DuplicateChecker
 
 #### Bank-Specific Importers

@@ -1,9 +1,9 @@
 """
 Test module for VenmoImporter class.
 
-This module contains comprehensive tests for the VenmoImporter class,
+This module contains comprehensive unit tests for the VenmoImporter class,
 covering all public methods, error conditions, and edge cases specific to
-Venmo's unique CSV format with multi-line headers and ISO datetime formats.
+Venmo's unique CSV format.
 """
 
 import pytest
@@ -11,7 +11,7 @@ import tempfile
 import os
 from unittest.mock import Mock, patch, MagicMock
 
-from src.cash_sync.venmo_importer import VenmoImporter
+from cash_sync import VenmoImporter
 
 
 class TestVenmoImporterInit:
@@ -418,6 +418,318 @@ class TestVenmoImporterInit:
             assert df.iloc[0]['To'] == 'Sarah Wilson'
             assert df.iloc[0]['Amount (total)'] == '- $75.00'
             
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_csv_file)
+
+    def test_transform_transactions_from_to_mapping(self):
+        """Test UT019: From/To mapping - Transaction with From/To should use correct description logic."""
+        importer = VenmoImporter()
+        
+        # Create test data for both debit and credit transactions
+        import pandas as pd
+        
+        # Test data: one debit (money sent) and one credit (money received)
+        venmo_data = {
+            'ID': ['1234567890123456789', '9876543210987654321'],
+            'Datetime': ['2024-01-15T14:30:22', '2024-01-16T15:45:33'],
+            'Type': ['Payment', 'Payment'],
+            'Status': ['Complete', 'Complete'],
+            'Note': ['Dinner payment', 'Rent split'],
+            'From': ['Alex Johnson', 'Sarah Wilson'],  # Who sent the money
+            'To': ['Emily Davis', 'Alex Johnson'],     # Who received the money
+            'Amount (total)': ['- $75.00', '+ $200.00'],  # Negative = sent, Positive = received
+            'Amount (tip)': ['', ''],
+            'Amount (tax)': ['0', '0'],
+            'Amount (fee)': ['0', '0'],
+            'Tax Rate': ['0', '0'],
+            'Tax Exempt': ['', ''],
+            'Funding Source': ['Venmo balance', ''],
+            'Destination': ['Venmo', 'Venmo balance'],
+            'Beginning Balance': ['', ''],
+            'Ending Balance': ['', ''],
+            'Statement Period Venmo Fees': ['', ''],
+            'Terminal Location': ['', ''],
+            'Year to Date Venmo Fees': ['', ''],
+            'Disclaimer': ['', '']
+        }
+        
+        venmo_df = pd.DataFrame(venmo_data)
+        
+        # Define existing columns that should be in the Excel file
+        existing_columns = [
+            'Date', 'Description', 'Category', 'Amount', 'Account', 
+            'Account #', 'Institution', 'Year', 'Month', 'Week', 
+            'Check Number', 'Full Description', 'Date Added'
+        ]
+        
+        # Transform the transactions
+        transformed = importer._transform_transactions(venmo_df, existing_columns)
+        
+        # Should return a list with two transformed transactions
+        assert len(transformed) == 2
+        
+        # Find the debit and credit transactions
+        debit_transaction = next(t for t in transformed if t['Amount'] == -75.00)
+        credit_transaction = next(t for t in transformed if t['Amount'] == 200.00)
+        
+        # For debit transactions (money sent), description should use 'To' field
+        assert debit_transaction['Description'] == 'Emily Davis', f"Expected 'Emily Davis' for debit, got '{debit_transaction['Description']}'"
+        
+        # For credit transactions (money received), description should use 'From' field
+        assert credit_transaction['Description'] == 'Sarah Wilson', f"Expected 'Sarah Wilson' for credit, got '{credit_transaction['Description']}'"
+
+    def test_transform_transactions_special_characters(self):
+        """Test UT020: Special characters - Emojis in notes should be handled correctly."""
+        importer = VenmoImporter()
+        
+        # Create test data with various special characters and emojis
+        import pandas as pd
+        
+        venmo_data = {
+            'ID': ['1234567890123456789', '9876543210987654321', '5555555555555555555'],
+            'Datetime': ['2024-01-15T14:30:22', '2024-01-16T15:45:33', '2024-01-17T16:00:00'],
+            'Type': ['Payment', 'Payment', 'Payment'],
+            'Status': ['Complete', 'Complete', 'Complete'],
+            'Note': [
+                'Dinner 🍕 🍷 with friends',  # Food emojis
+                'Coffee ☕ and pastries 🥐',  # Drink and food emojis
+                'Concert tickets 🎵 🎫 for tonight!'  # Music emojis with punctuation
+            ],
+            'From': ['Alex Johnson', 'Sarah Wilson', 'Mike Chen'],
+            'To': ['Emily Davis', 'Alex Johnson', 'Alex Johnson'],
+            'Amount (total)': ['- $45.50', '+ $12.75', '+ $120.00'],
+            'Amount (tip)': ['', '', ''],
+            'Amount (tax)': ['0', '0', '0'],
+            'Amount (fee)': ['0', '0', '0'],
+            'Tax Rate': ['0', '0', '0'],
+            'Tax Exempt': ['', '', ''],
+            'Funding Source': ['Venmo balance', '', ''],
+            'Destination': ['Venmo', 'Venmo balance', 'Venmo balance'],
+            'Beginning Balance': ['', '', ''],
+            'Ending Balance': ['', '', ''],
+            'Statement Period Venmo Fees': ['', '', ''],
+            'Terminal Location': ['', '', ''],
+            'Year to Date Venmo Fees': ['', '', ''],
+            'Disclaimer': ['', '', '']
+        }
+        
+        venmo_df = pd.DataFrame(venmo_data)
+        
+        # Define existing columns that should be in the Excel file
+        existing_columns = [
+            'Date', 'Description', 'Category', 'Amount', 'Account', 
+            'Account #', 'Institution', 'Year', 'Month', 'Week', 
+            'Check Number', 'Full Description', 'Date Added', 'Note'
+        ]
+        
+        # Transform the transactions
+        transformed = importer._transform_transactions(venmo_df, existing_columns)
+        
+        # Should return a list with three transformed transactions
+        assert len(transformed) == 3
+        
+        # Find each transaction by amount and verify emojis are preserved
+        dinner_transaction = next(t for t in transformed if t['Amount'] == -45.50)
+        coffee_transaction = next(t for t in transformed if t['Amount'] == 12.75)
+        concert_transaction = next(t for t in transformed if t['Amount'] == 120.00)
+        
+        # Check that Note field exists (according to spec: Note -> Note)
+        assert 'Note' in dinner_transaction
+        assert 'Note' in coffee_transaction  
+        assert 'Note' in concert_transaction
+        
+        # Verify that emojis are preserved in the Note field (per specification)
+        # According to venmo_importer.md: Note field maps to Note field
+        assert '🍕' in dinner_transaction['Note'] and '🍷' in dinner_transaction['Note'], f"Expected emojis in dinner note: {dinner_transaction['Note']}"
+        assert '☕' in coffee_transaction['Note'] and '🥐' in coffee_transaction['Note'], f"Expected emojis in coffee note: {coffee_transaction['Note']}"
+        assert '🎵' in concert_transaction['Note'] and '🎫' in concert_transaction['Note'], f"Expected emojis in concert note: {concert_transaction['Note']}"
+
+    def test_transform_transactions_empty_fields(self):
+        """Test UT021: Empty fields - Missing From/To fields should be handled gracefully."""
+        importer = VenmoImporter()
+        
+        # Create test data with empty/missing From and To fields
+        import pandas as pd
+        
+        venmo_data = {
+            'ID': ['1111111111111111111', '2222222222222222222', '3333333333333333333'],
+            'Datetime': ['2024-01-15T14:30:22', '2024-01-16T15:45:33', '2024-01-17T16:00:00'],
+            'Type': ['Payment', 'Payment', 'Payment'],
+            'Status': ['Complete', 'Complete', 'Complete'],
+            'Note': ['Empty from field', 'Empty to field', 'Both fields empty'],
+            'From': ['', 'Alex Johnson', ''],  # First and third have empty From
+            'To': ['Sarah Wilson', '', ''],    # Second and third have empty To
+            'Amount (total)': ['- $25.00', '+ $50.00', '- $75.00'],
+            'Amount (tip)': ['', '', ''],
+            'Amount (tax)': ['0', '0', '0'],
+            'Amount (fee)': ['0', '0', '0'],
+            'Tax Rate': ['0', '0', '0'],
+            'Tax Exempt': ['', '', ''],
+            'Funding Source': ['Venmo balance', '', ''],
+            'Destination': ['Venmo', 'Venmo balance', 'Venmo'],
+            'Beginning Balance': ['', '', ''],
+            'Ending Balance': ['', '', ''],
+            'Statement Period Venmo Fees': ['', '', ''],
+            'Terminal Location': ['', '', ''],
+            'Year to Date Venmo Fees': ['', '', ''],
+            'Disclaimer': ['', '', '']
+        }
+        
+        venmo_df = pd.DataFrame(venmo_data)
+        
+        # Define existing columns that should be in the Excel file
+        existing_columns = [
+            'Date', 'Description', 'Category', 'Amount', 'Account', 
+            'Account #', 'Institution', 'Year', 'Month', 'Week', 
+            'Check Number', 'Full Description', 'Date Added'
+        ]
+        
+        # Transform the transactions
+        transformed = importer._transform_transactions(venmo_df, existing_columns)
+        
+        # Should return a list with three transformed transactions
+        assert len(transformed) == 3
+        
+        # Find transactions by amount
+        first_transaction = next(t for t in transformed if t['Amount'] == -25.00)  # Empty From, has To
+        second_transaction = next(t for t in transformed if t['Amount'] == 50.00)  # Has From, empty To
+        third_transaction = next(t for t in transformed if t['Amount'] == -75.00)  # Both empty
+        
+        # Test case 1: Empty From field, has To field, negative amount (should use To field)
+        assert first_transaction['Description'] == 'Sarah Wilson', f"Expected 'Sarah Wilson' for first transaction, got '{first_transaction['Description']}'"
+        
+        # Test case 2: Has From field, empty To field, positive amount (should use From field)
+        assert second_transaction['Description'] == 'Alex Johnson', f"Expected 'Alex Johnson' for second transaction, got '{second_transaction['Description']}'"
+        
+        # Test case 3: Both From and To fields empty (should use fallback description)
+        # When both fields are empty, should use a default description like "Venmo Transaction" or "Unknown"
+        expected_fallback = 'Venmo Transaction'  # Define expected fallback behavior
+        assert third_transaction['Description'] == expected_fallback, f"Expected '{expected_fallback}' for third transaction, got '{third_transaction['Description']}'"
+
+    def test_transform_transactions_multi_line_disclaimer(self):
+        """Test UT022: Multi-line disclaimer - CSV with multi-line disclaimer in last row should be handled correctly."""
+        importer = VenmoImporter()
+        
+        # Create a temporary CSV file with multi-line disclaimer at the end
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as f:
+            f.write("Account Statement - (@testuser) ,,,,,,,,,,,,,,,,,,,,,\n")
+            f.write("Account Activity,,,,,,,,,,,,,,,,,,,,,\n")
+            f.write(",ID,Datetime,Type,Status,Note,From,To,Amount (total),Amount (tip),Amount (tax),Amount (fee),Tax Rate,Tax Exempt,Funding Source,Destination,Beginning Balance,Ending Balance,Statement Period Venmo Fees,Terminal Location,Year to Date Venmo Fees,Disclaimer\n")
+            f.write(",,,,,,,,,,,,,,,,,,,,\"$1,250.00\",,,,,\n")
+            # Add some valid transaction data
+            f.write(",1234567890123456789,2024-01-15T14:30:22,Payment,Complete,Dinner payment,Alex Johnson,Sarah Wilson,- $75.00,,0,,0,,Venmo balance,,,,,Venmo,,,\n")
+            f.write(",9876543210987654321,2024-01-16T15:45:33,Payment,Complete,Coffee money,Mike Chen,Alex Johnson,+ $12.50,,0,,0,,Venmo balance,,,,,Venmo,,,\n")
+            # Add multi-line disclaimer at the end (this should be filtered out)
+            f.write(",,,,,,,,,,,,,,,,,,,,,,\"This is a multi-line disclaimer\n")
+            f.write("that spans multiple lines and contains\n")
+            f.write("important legal information about\n")
+            f.write("your Venmo account and transactions.\"\n")
+            temp_csv_file = f.name
+        
+        try:
+            # Read the CSV data which should handle multi-line disclaimer correctly
+            df = importer._read_csv_data(temp_csv_file)
+            
+            # Should have processed only the valid transaction data, filtering out disclaimer
+            assert len(df) == 2, f"Expected 2 transactions, but got {len(df)}"
+            
+            # Check that we have the expected transaction data
+            assert 'Datetime' in df.columns
+            assert 'From' in df.columns
+            assert 'To' in df.columns
+            assert 'Amount (total)' in df.columns
+            
+            # Verify the transaction data is correct (not corrupted by disclaimer)
+            first_row = df.iloc[0]
+            second_row = df.iloc[1]
+            
+            assert first_row['Datetime'] == '2024-01-15T14:30:22'
+            assert first_row['From'] == 'Alex Johnson'
+            assert first_row['To'] == 'Sarah Wilson'
+            assert first_row['Amount (total)'] == '- $75.00'
+            
+            assert second_row['Datetime'] == '2024-01-16T15:45:33'
+            assert second_row['From'] == 'Mike Chen'
+            assert second_row['To'] == 'Alex Johnson'
+            assert second_row['Amount (total)'] == '+ $12.50'
+            
+            # Transform the transactions to ensure they process correctly
+            existing_columns = [
+                'Date', 'Description', 'Category', 'Amount', 'Account', 
+                'Account #', 'Institution', 'Year', 'Month', 'Week', 
+                'Check Number', 'Full Description', 'Date Added'
+            ]
+            
+            transformed = importer._transform_transactions(df, existing_columns)
+            
+            # Should successfully transform both transactions
+            assert len(transformed) == 2
+            
+            # Verify transformed data is correct
+            first_transaction = next(t for t in transformed if t['Amount'] == -75.00)
+            second_transaction = next(t for t in transformed if t['Amount'] == 12.50)
+            
+            assert first_transaction['Description'] == 'Sarah Wilson'  # Debit: use To field
+            assert second_transaction['Description'] == 'Mike Chen'    # Credit: use From field
+            
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_csv_file)
+
+    def test_read_csv_data_balance_row_filtering(self):
+        """Test UT023: Balance row filtering - CSV with beginning/ending balance rows should be filtered out correctly."""
+        importer = VenmoImporter()
+        
+        # Create a temporary CSV file with balance rows that should be filtered out
+        # Use a simple format that matches existing working tests
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, encoding='utf-8') as f:
+            f.write("Account Statement - (@testuser) ,,,,,,,,,,,,,,,,,,,,,\n")
+            f.write("Account Activity,,,,,,,,,,,,,,,,,,,,,\n")
+            f.write(",ID,Datetime,Type,Status,Note,From,To,Amount (total),Amount (tip),Amount (tax),Amount (fee),Tax Rate,Tax Exempt,Funding Source,Destination,Beginning Balance,Ending Balance,Statement Period Venmo Fees,Terminal Location,Year to Date Venmo Fees,Disclaimer\n")
+            
+            # Beginning balance row (should be filtered out - no transaction ID) - match working test format
+            f.write(",,,,,,,,,,,,,,,,,,,,\"$1,250.00\",,,,,\n")
+            
+            # Valid transaction (should be kept) - exact same format as working test
+            f.write(",1234567890123456789,2024-01-15T14:30:22,Payment,Complete,Dinner payment,Alex Johnson,Sarah Wilson,- $75.00,,0,,0,,Venmo balance,,,,,Venmo,,,\n")
+            
+            # Ending balance row (should be filtered out - no transaction ID) - match working test format
+            f.write(",,,,,,,,,,,,,,,,,,,,\"$1,175.00\",,,,,\n")
+            
+            temp_csv_file = f.name
+        
+        try:
+            # Call the actual _read_csv_data method to test the real functionality
+            df = importer._read_csv_data(temp_csv_file)
+            
+            # The method should filter out balance rows and keep only valid transactions
+            # We expect 1 transaction (the valid one with ID), balance rows should be filtered out
+            assert len(df) == 1, f"Expected 1 transaction after filtering, but got {len(df)}. DataFrame:\n{df}"
+            
+            # Verify we have the expected columns
+            assert 'ID' in df.columns
+            assert 'Datetime' in df.columns
+            assert 'From' in df.columns
+            assert 'To' in df.columns
+            assert 'Amount (total)' in df.columns
+            
+            # Verify the remaining transaction has a valid ID
+            transaction_row = df.iloc[0]
+            # ID might be parsed as float, so convert to string for comparison
+            assert transaction_row['ID'] == '1234567890123456789'
+            assert transaction_row['Datetime'] == '2024-01-15T14:30:22'
+            assert transaction_row['From'] == 'Alex Johnson'
+            assert transaction_row['To'] == 'Sarah Wilson'
+            assert transaction_row['Amount (total)'] == '- $75.00'
+            
+            # Verify all rows have valid transaction IDs (no empty or NaN IDs)
+            for idx, row in df.iterrows():
+                transaction_id = row['ID'].strip()
+                assert transaction_id != '', f"Row {idx} should have been filtered out due to empty transaction ID"
+                assert transaction_id != 'nan', f"Row {idx} should have been filtered out due to NaN transaction ID"
+                assert len(transaction_id) > 0, f"Row {idx} has zero-length transaction ID"
+                
         finally:
             # Clean up temporary file
             os.unlink(temp_csv_file)
